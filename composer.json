@@ -1,0 +1,46 @@
+{
+    "type": "library",
+    "license": "MIT",
+    "name": "guikingone/agent-skills",
+    "description": "A library that integrate agent skills standard",
+    "authors": [
+        {
+            "name": "Guillaume Loulier",
+            "email": "contact@guillaumeloulier.fr",
+            "homepage": "https://www.guillaumeloulier.fr/"
+        }
+    ],
+    "prefer-stable": true,
+    "config": {
+        "classmap-authoritative": true,
+        "optimize-autoloader": true,
+        "sort-packages": true
+    },
+    "autoload": {
+        "psr-4": {
+            "AgentSkills\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "AgentSkills\\Tests\\": "tests/"
+        }
+    },
+    "require": {
+        "php": ">= 8.2",
+        "symfony/filesystem": "^7.3|^8.0",
+        "symfony/finder": "^7.3|^8.0",
+        "symfony/http-client": "^7.3|^8.0",
+        "symfony/string": "^7.3|^8.0"
+    },
+    "require-dev": {
+        "friendsofphp/php-cs-fixer": "^3.94",
+        "laravel/ai": "^0.2.8",
+        "phpstan/phpstan": "^2.1",
+        "phpunit/phpunit": "^13.0",
+        "rector/rector": "^2.3",
+        "symfony/ai-agent": "^0.6.0",
+        "symfony/config": "^7.3|^8.0",
+        "symfony/console": "^7.4"
+    }
+}
