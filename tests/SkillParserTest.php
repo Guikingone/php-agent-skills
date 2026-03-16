@@ -1,22 +1,31 @@
 <?php
 
-/*
- * This file is part of the Symfony package.
- *
- * (c) Fabien Potencier <fabien@symfony.com>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
- */
+declare(strict_types=1);
 
-namespace AgentSkills\Tests\Skill;
+namespace AgentSkills\Tests;
 
 use AgentSkills\Exception\InvalidArgumentException;
-use PHPUnit\Framework\TestCase;
 use AgentSkills\Skill;
 use AgentSkills\SkillMetadata;
 use AgentSkills\SkillParser;
+use PHPUnit\Framework\TestCase;
 use Symfony\Component\Filesystem\Filesystem;
+
+use function array_map;
+use function bin2hex;
+use function explode;
+use function implode;
+use function ltrim;
+use function min;
+use function preg_match;
+use function random_bytes;
+use function sprintf;
+use function strlen;
+use function substr;
+use function sys_get_temp_dir;
+use function trim;
+
+use const PHP_INT_MAX;
 
 final class SkillParserTest extends TestCase
 {
@@ -24,7 +33,7 @@ final class SkillParserTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->tempDir = sys_get_temp_dir().'/skill_parser_test_'.bin2hex(random_bytes(4));
+        $this->tempDir = sys_get_temp_dir() . '/skill_parser_test_' . bin2hex(random_bytes(4));
 
         (new Filesystem())->mkdir($this->tempDir);
     }
@@ -39,7 +48,7 @@ final class SkillParserTest extends TestCase
         $this->createSkillFile("---\nname: \"\"\ndescription: A skill with empty name\n---\nBody.");
 
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage(\sprintf('Missing or invalid required field "name" in "%s/SKILL.md".', $this->tempDir));
+        $this->expectExceptionMessage(sprintf('Missing or invalid required field "name" in "%s/SKILL.md".', $this->tempDir));
         $this->expectExceptionCode(0);
         (new SkillParser())->parse($this->tempDir);
     }
@@ -56,7 +65,7 @@ final class SkillParserTest extends TestCase
 
     public function testParseMinimalSkill()
     {
-        $this->createSkillFile(<<<'MD'
+        $skillDir = $this->createSkillFile(<<<'MD'
             ---
             name: my-skill
             description: A simple skill
@@ -64,7 +73,7 @@ final class SkillParserTest extends TestCase
             Do something useful.
             MD);
 
-        $skill = (new SkillParser())->parse($this->tempDir);
+        $skill = (new SkillParser())->parse($skillDir);
 
         $this->assertInstanceOf(Skill::class, $skill);
         $this->assertSame('my-skill', $skill->getName());
@@ -74,7 +83,7 @@ final class SkillParserTest extends TestCase
 
     public function testParseSkillWithAllFrontmatterFields()
     {
-        $this->createSkillFile(<<<'MD'
+        $skillDir = $this->createSkillFile(<<<'MD'
             ---
             name: pdf-processing
             description: Processes PDF documents and extracts content
@@ -90,7 +99,7 @@ final class SkillParserTest extends TestCase
             Extract text from PDF files.
             MD);
 
-        $skill = (new SkillParser())->parse($this->tempDir);
+        $skill = (new SkillParser())->parse($skillDir);
 
         $this->assertSame('pdf-processing', $skill->getName());
         $this->assertSame('Processes PDF documents and extracts content', $skill->getDescription());
@@ -106,14 +115,14 @@ final class SkillParserTest extends TestCase
 
     public function testParseSkillWithEmptyBody()
     {
-        $this->createSkillFile(<<<'MD'
+        $skillDir = $this->createSkillFile(<<<'MD'
             ---
             name: empty-body
             description: Skill with no body
             ---
             MD);
 
-        $skill = (new SkillParser())->parse($this->tempDir);
+        $skill = (new SkillParser())->parse($skillDir);
 
         $this->assertSame('empty-body', $skill->getName());
         $this->assertSame('', $skill->getBody());
@@ -121,7 +130,7 @@ final class SkillParserTest extends TestCase
 
     public function testParseSkillWithMultilineBody()
     {
-        $this->createSkillFile(<<<'MD'
+        $skillDir = $this->createSkillFile(<<<'MD'
             ---
             name: code-review
             description: Reviews code changes
@@ -135,7 +144,7 @@ final class SkillParserTest extends TestCase
             Provide feedback.
             MD);
 
-        $skill = (new SkillParser())->parse($this->tempDir);
+        $skill = (new SkillParser())->parse($skillDir);
 
         $this->assertStringContainsString('## Step 1', $skill->getBody());
         $this->assertStringContainsString('## Step 2', $skill->getBody());
@@ -144,7 +153,7 @@ final class SkillParserTest extends TestCase
 
     public function testParseThrowsWhenSkillMdIsMissing()
     {
-        $emptyDir = $this->tempDir.'/empty';
+        $emptyDir = $this->tempDir . '/empty';
         (new Filesystem())->mkdir($emptyDir);
 
         $this->expectException(InvalidArgumentException::class);
@@ -165,7 +174,7 @@ final class SkillParserTest extends TestCase
 
     public function testParseThrowsWhenFrontmatterNotClosed()
     {
-        $this->createSkillFile(<<<'MD'
+        $skillDir = $this->createSkillFile(<<<'MD'
             ---
             name: broken
             description: Missing closing delimiter
@@ -174,7 +183,7 @@ final class SkillParserTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Unable to parse YAML frontmatter');
 
-        (new SkillParser())->parse($this->tempDir);
+        (new SkillParser())->parse($skillDir);
     }
 
     public function testParseThrowsWhenMissingName()
@@ -194,7 +203,7 @@ final class SkillParserTest extends TestCase
 
     public function testParseThrowsWhenMissingDescription()
     {
-        $this->createSkillFile(<<<'MD'
+        $skillDir = $this->createSkillFile(<<<'MD'
             ---
             name: no-desc
             ---
@@ -204,12 +213,12 @@ final class SkillParserTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Missing or invalid required field "description"');
 
-        (new SkillParser())->parse($this->tempDir);
+        (new SkillParser())->parse($skillDir);
     }
 
     public function testParseMetadataOnlyReturnsSkillMetadata()
     {
-        $this->createSkillFile(<<<'MD'
+        $skillDir = $this->createSkillFile(<<<'MD'
             ---
             name: lightweight
             description: Only metadata is parsed
@@ -218,7 +227,7 @@ final class SkillParserTest extends TestCase
             This body should not matter for metadata-only parsing.
             MD);
 
-        $metadata = (new SkillParser())->parseMetadataOnly($this->tempDir);
+        $metadata = (new SkillParser())->parseMetadataOnly($skillDir);
 
         $this->assertInstanceOf(SkillMetadata::class, $metadata);
         $this->assertSame('lightweight', $metadata->getName());
@@ -228,7 +237,7 @@ final class SkillParserTest extends TestCase
 
     public function testParseMetadataOnlyThrowsWhenMissing()
     {
-        $emptyDir = $this->tempDir.'/empty';
+        $emptyDir = $this->tempDir . '/empty';
         (new Filesystem())->mkdir($emptyDir);
 
         $this->expectException(InvalidArgumentException::class);
@@ -239,7 +248,7 @@ final class SkillParserTest extends TestCase
 
     public function testParseSkillWithQuotedValues()
     {
-        $this->createSkillFile(<<<'MD'
+        $skillDir = $this->createSkillFile(<<<'MD'
             ---
             name: quoted-values
             description: "A skill with quoted values"
@@ -248,7 +257,7 @@ final class SkillParserTest extends TestCase
             Body.
             MD);
 
-        $skill = (new SkillParser())->parse($this->tempDir);
+        $skill = (new SkillParser())->parse($skillDir);
 
         $this->assertSame('quoted-values', $skill->getName());
         $this->assertSame('A skill with quoted values', $skill->getDescription());
@@ -257,7 +266,7 @@ final class SkillParserTest extends TestCase
 
     public function testParseSkillWithComments()
     {
-        $this->createSkillFile(<<<'MD'
+        $skillDir = $this->createSkillFile(<<<'MD'
             ---
             # This is a comment
             name: commented
@@ -266,14 +275,14 @@ final class SkillParserTest extends TestCase
             Body.
             MD);
 
-        $skill = (new SkillParser())->parse($this->tempDir);
+        $skill = (new SkillParser())->parse($skillDir);
 
         $this->assertSame('commented', $skill->getName());
     }
 
     public function testParseSkillWithAllowedToolsSingleTool()
     {
-        $this->createSkillFile(<<<'MD'
+        $skillDir = $this->createSkillFile(<<<'MD'
             ---
             name: single-tool
             description: Skill with one tool
@@ -282,9 +291,21 @@ final class SkillParserTest extends TestCase
             Body.
             MD);
 
-        $skill = (new SkillParser())->parse($this->tempDir);
+        $skill = (new SkillParser())->parse($skillDir);
 
         $this->assertSame(['Read'], $skill->getMetadata()->getAllowedTools());
+    }
+
+    public function testParseThrowsWhenNameDoesNotMatchDirectory()
+    {
+        $mismatchDir = $this->tempDir . '/wrong-name';
+        (new Filesystem())->mkdir($mismatchDir);
+        (new Filesystem())->dumpFile($mismatchDir . '/SKILL.md', "---\nname: correct-name\ndescription: A skill in the wrong directory\n---\nBody.");
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Skill name "correct-name" must match parent directory name "wrong-name"');
+
+        (new SkillParser())->parse($mismatchDir);
     }
 
     public function testParseFromContentReturnsSkill()
@@ -305,9 +326,9 @@ final class SkillParserTest extends TestCase
         $skill = (new SkillParser())->parseFromContent(
             $content,
             'github://owner/repo/remote-skill',
-            static fn (string $script): string => '/tmp/scripts/'.$script,
-            static fn (string $ref): string => 'Reference: '.$ref,
-            static fn (string $asset): string => 'Asset: '.$asset,
+            static fn (string $script): string => '/tmp/scripts/' . $script,
+            static fn (string $ref): string => 'Reference: ' . $ref,
+            static fn (string $asset): string => 'Asset: ' . $asset,
         );
 
         $this->assertSame('/tmp/scripts/setup.sh', $skill->loadScript('setup.sh'));
@@ -328,7 +349,7 @@ final class SkillParserTest extends TestCase
 
     public function testLoadReferenceBuildsCorrectPath()
     {
-        $this->createSkillFile(<<<'MD'
+        $skillDir = $this->createSkillFile(<<<'MD'
             ---
             name: ref-skill
             description: A skill with references
@@ -336,17 +357,17 @@ final class SkillParserTest extends TestCase
             Body.
             MD);
 
-        (new Filesystem())->mkdir($this->tempDir.'/references');
-        (new Filesystem())->dumpFile($this->tempDir.'/references/guide.md', 'Reference content');
+        (new Filesystem())->mkdir($skillDir . '/references');
+        (new Filesystem())->dumpFile($skillDir . '/references/guide.md', 'Reference content');
 
-        $skill = (new SkillParser())->parse($this->tempDir);
+        $skill = (new SkillParser())->parse($skillDir);
 
         $this->assertSame('Reference content', $skill->loadReference('guide.md'));
     }
 
     public function testLoadAssetBuildsCorrectPath()
     {
-        $this->createSkillFile(<<<'MD'
+        $skillDir = $this->createSkillFile(<<<'MD'
             ---
             name: asset-skill
             description: A skill with assets
@@ -354,29 +375,45 @@ final class SkillParserTest extends TestCase
             Body.
             MD);
 
-        (new Filesystem())->mkdir($this->tempDir.'/assets');
-        (new Filesystem())->dumpFile($this->tempDir.'/assets/template.txt', 'Asset content');
+        (new Filesystem())->mkdir($skillDir . '/assets');
+        (new Filesystem())->dumpFile($skillDir . '/assets/template.txt', 'Asset content');
 
-        $skill = (new SkillParser())->parse($this->tempDir);
+        $skill = (new SkillParser())->parse($skillDir);
 
         $this->assertSame('Asset content', $skill->loadAsset('template.txt'));
     }
 
-    private function createSkillFile(string $content): void
+    /**
+     * Creates a SKILL.md file in a subdirectory matching the skill name.
+     *
+     * @return string The skill directory path
+     */
+    private function createSkillFile(string $content): string
     {
         $lines = explode("\n", $content);
-        $minIndent = \PHP_INT_MAX;
+        $minIndent = PHP_INT_MAX;
 
         foreach ($lines as $line) {
             if ('' !== trim($line)) {
-                $minIndent = min($minIndent, \strlen($line) - \strlen(ltrim($line)));
+                $minIndent = min($minIndent, strlen($line) - strlen(ltrim($line)));
             }
         }
 
-        if ($minIndent > 0 && $minIndent < \PHP_INT_MAX) {
-            $lines = array_map(static fn (string $l): string => \strlen($l) >= $minIndent ? substr($l, $minIndent) : $l, $lines);
+        if ($minIndent > 0 && $minIndent < PHP_INT_MAX) {
+            $lines = array_map(static fn (string $l): string => strlen($l) >= $minIndent ? substr($l, $minIndent) : $l, $lines);
         }
 
-        (new Filesystem())->dumpFile($this->tempDir.'/SKILL.md', implode("\n", $lines));
+        $normalized = implode("\n", $lines);
+
+        // Extract skill name to create a matching directory
+        $skillDir = $this->tempDir;
+        if (1 === preg_match('/^name:\s*["\']?([a-z0-9](?:[a-z0-9-]*[a-z0-9])?)["\']?\s*$/m', $normalized, $matches)) {
+            $skillDir = $this->tempDir . '/' . $matches[1];
+        }
+
+        (new Filesystem())->mkdir($skillDir);
+        (new Filesystem())->dumpFile($skillDir . '/SKILL.md', $normalized);
+
+        return $skillDir;
     }
 }

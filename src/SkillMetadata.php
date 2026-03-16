@@ -1,18 +1,13 @@
 <?php
 
-/*
- * This file is part of the Symfony package.
- *
- * (c) Fabien Potencier <fabien@symfony.com>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
- */
+declare(strict_types=1);
 
 namespace AgentSkills;
 
 use AgentSkills\Exception\InvalidArgumentException;
 use Symfony\Component\String\UnicodeString;
+
+use function sprintf;
 
 /**
  * @author Guillaume Loulier <contact@guillaumeloulier.fr>
@@ -22,13 +17,13 @@ final class SkillMetadata implements SkillMetadataInterface
     private readonly string $name;
 
     /**
-     * @param string               $name          Skill name (kebab-case, required)
-     * @param string               $description   What the skill does and when to use it (required)
-     * @param string|null          $license       SPDX license identifier
-     * @param string[]             $allowedTools  Pre-approved tools the skill may use
-     * @param string|null          $compatibility Agent compatibility hints
-     * @param array<string, mixed> $metadata      Arbitrary metadata (author, version, etc.)
-     * @param array<string, mixed> $frontmatter   Raw frontmatter data
+     * @param string $name Skill name (kebab-case, required)
+     * @param string $description What the skill does and when to use it (required)
+     * @param string|null $license SPDX license identifier
+     * @param string[] $allowedTools Pre-approved tools the skill may use
+     * @param string|null $compatibility Agent compatibility hints
+     * @param array<string, mixed> $metadata Arbitrary metadata (author, version, etc.)
+     * @param array<string, mixed> $frontmatter Raw frontmatter data
      */
     public function __construct(
         string $name,
@@ -42,7 +37,7 @@ final class SkillMetadata implements SkillMetadataInterface
         $unicodeName = new UnicodeString($name);
 
         if ($unicodeName->isEmpty() || !$unicodeName->match('/^[a-z0-9]+(-[a-z0-9]+)*$/')) {
-            throw new InvalidArgumentException(\sprintf('Skill name "%s" must be non-empty kebab-case (e.g. "my-skill").', $name));
+            throw new InvalidArgumentException(sprintf('Skill name "%s" must be non-empty kebab-case (e.g. "my-skill").', $name));
         }
 
         $this->name = $unicodeName->toString();

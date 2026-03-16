@@ -1,23 +1,21 @@
 <?php
 
-/*
- * This file is part of the Symfony package.
- *
- * (c) Fabien Potencier <fabien@symfony.com>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
- */
+declare(strict_types=1);
 
-namespace AgentSkills\Tests\Skill;
+namespace AgentSkills\Tests\Bridge\Symfony\AI;
 
 use AgentSkills\Bridge\Symfony\AI\SkillInputProcessor;
+use AgentSkills\FilesystemSkillLoader;
 use PHPUnit\Framework\TestCase;
 use Symfony\AI\Agent\Input;
-use AgentSkills\FilesystemSkillLoader;
 use Symfony\AI\Platform\Message\Message;
 use Symfony\AI\Platform\Message\MessageBag;
 use Symfony\Component\Filesystem\Filesystem;
+
+use function bin2hex;
+use function random_bytes;
+use function sprintf;
+use function sys_get_temp_dir;
 
 final class SkillInputProcessorTest extends TestCase
 {
@@ -25,7 +23,7 @@ final class SkillInputProcessorTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->tempDir = sys_get_temp_dir().'/skill_processor_test_'.bin2hex(random_bytes(4));
+        $this->tempDir = sys_get_temp_dir() . '/skill_processor_test_' . bin2hex(random_bytes(4));
 
         (new Filesystem())->mkdir($this->tempDir);
     }
@@ -148,12 +146,12 @@ final class SkillInputProcessorTest extends TestCase
 
     private function createSkillDirectory(string $name, string $description): void
     {
-        $skillDir = $this->tempDir.'/'.$name;
+        $skillDir = $this->tempDir . '/' . $name;
 
         (new Filesystem())->mkdir($skillDir);
         (new Filesystem())->dumpFile(
-            $skillDir.'/SKILL.md',
-            \sprintf("---\nname: %s\ndescription: %s\n---\nInstructions for %s.", $name, $description, $name),
+            $skillDir . '/SKILL.md',
+            sprintf("---\nname: %s\ndescription: %s\n---\nInstructions for %s.", $name, $description, $name),
         );
     }
 }

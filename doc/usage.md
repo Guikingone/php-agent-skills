@@ -45,11 +45,11 @@ metadata:                              # Optional: arbitrary metadata
 
 ## Loading Skills
 
-Skills are loaded using an implementation of :class:`Symfony\\AI\\Agent\\Skill\\SkillLoaderInterface`,
-the default one is :class:`Symfony\\AI\\Agent\\Skill\\FilesystemSkillLoader` which scans directories for ``SKILL.md`` files:
+Skills are loaded using an implementation of :class:`AgentSkills\\SkillLoaderInterface`,
+the default one is :class:`AgentSkills\\FilesystemSkillLoader` which scans directories for ``SKILL.md`` files:
 
 ```php
-use Symfony\AI\Agent\Skill\FilesystemSkillLoader;
+use AgentSkills\FilesystemSkillLoader;
 
 $loader = new FilesystemSkillLoader([
     __DIR__.'/skills',
@@ -68,12 +68,12 @@ $metadata = $loader->discoverMetadata();
 
 ## Loading Skills from GitHub
 
-The :class:`Symfony\\AI\\Agent\\Skill\\GithubSkillLoader` loads skills from GitHub repositories using
+The :class:`AgentSkills\\GithubSkillLoader` loads skills from GitHub repositories using
 the `GitHub Contents API`_. This enables sharing and distributing skills across teams and projects
 without local copies:
 
 ```php
-use Symfony\AI\Agent\Skill\GithubSkillLoader;
+use AgentSkills\GithubSkillLoader;
 use Symfony\Component\HttpClient\HttpClient;
 
 $loader = new GithubSkillLoader(
@@ -120,16 +120,15 @@ The GitHub loader expects the same directory structure as the filesystem loader:
 directory containing a ``SKILL.md`` file, with optional ``scripts/``, ``references/``, and ``assets/``
 subdirectories.
 
-Combining Loaders with ChainSkillLoader
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+## Combining Loaders with ChainSkillLoader
 
-The :class:`Symfony\\AI\\Agent\\Skill\\ChainSkillLoader` composes multiple loaders into a single
+The `AgentSkills\ChainSkillLoader` composes multiple loaders into a single
 transparent loader. This is useful when skills come from both local directories and remote
 repositories::
 
-    use Symfony\AI\Agent\Skill\ChainSkillLoader;
-    use Symfony\AI\Agent\Skill\FilesystemSkillLoader;
-    use Symfony\AI\Agent\Skill\GithubSkillLoader;
+    use AgentSkills\ChainSkillLoader;
+    use AgentSkills\FilesystemSkillLoader;
+    use AgentSkills\GithubSkillLoader;
     use Symfony\Component\HttpClient\HttpClient;
 
     $localLoader = new FilesystemSkillLoader([__DIR__.'/skills']);
@@ -152,15 +151,16 @@ The chain loader follows a **first-match-wins** strategy:
 This makes it easy to override remote skills with local versions by placing the local loader
 first in the chain.
 
-Using Skills as Context
-^^^^^^^^^^^^^^^^^^^^^^^
+## Using Skills as Context
 
-The :class:`Symfony\\AI\\Agent\\InputProcessor\\SkillInputProcessor` injects skill content directly into the system
+### Symfony AI Bridge
+
+The `AgentSkills\Bridge\Symfony\AI\SkillInputProcessor` injects skill content directly into the system
 prompt, providing the agent with contextual knowledge::
 
+    use AgentSkills\Bridge\Symfony\AI\SkillInputProcessor;
+    use AgentSkills\FilesystemSkillLoader;
     use Symfony\AI\Agent\Agent;
-    use Symfony\AI\Agent\InputProcessor\SkillInputProcessor;
-    use Symfony\AI\Agent\Skill\FilesystemSkillLoader;
     use Symfony\AI\Platform\Message\Message;
     use Symfony\AI\Platform\Message\MessageBag;
 
@@ -189,14 +189,20 @@ This approach is ideal when:
 * The skill content should influence all agent responses
 * You want the agent to follow specific guidelines or patterns
 
-Using Skills as Tools
-^^^^^^^^^^^^^^^^^^^^^
+### Laravel AI Bridge
+
+The ``AgentSkills\Bridge\Laravel\AI\Middleware\SkillPromptMiddleware`` provides the same functionality
+for Laravel AI agents. See the `Laravel AI documentation`_ for configuration and usage details.
+
+# Using Skills as Tools
+
+## Symfony AI Bridge
 
 Skills can be exposed as callable tools using :class:`Symfony\\AI\\Agent\\Toolbox\\Tool\\SkillTool`, allowing the agent
 to actively query skills when needed::
 
+    use AgentSkills\FilesystemSkillLoader;
     use Symfony\AI\Agent\Agent;
-    use Symfony\AI\Agent\Skill\FilesystemSkillLoader;
     use Symfony\AI\Agent\Toolbox\AgentProcessor;
     use Symfony\AI\Agent\Toolbox\Tool\SkillTool;
     use Symfony\AI\Agent\Toolbox\Toolbox;
@@ -240,6 +246,12 @@ This approach is ideal when:
 * The agent should decide when to consult specific knowledge
 * Skills contain large amounts of information
 * You want to minimize token usage by loading skills on-demand
+
+## Laravel AI Bridge
+
+The Laravel AI bridge provides equivalent tool classes: ``GetSkillTool``, ``GetSkillsTool``, and
+``ExecuteSkillScriptTool``. These are automatically registered in the container when ``active_skills``
+are configured. See the `Laravel AI documentation`_ for configuration and usage details.
 
 Executing Scripts from Skills
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -286,8 +298,7 @@ both error output and standard output are included in the result.
     Scripts execute arbitrary code on your system. Only use skills from trusted sources and review script contents
     before execution. Always set appropriate timeouts and validate script inputs.
 
-Creating Your Own Skills
-^^^^^^^^^^^^^^^^^^^^^^^^
+# Creating Your Own Skills
 
 Create a new skill by following this structure:
 
@@ -354,13 +365,28 @@ Create a new skill by following this structure:
 * Document script parameters and expected behavior
 * Include examples and common patterns
 
-Validating Skills
-^^^^^^^^^^^^^^^^^
+# Validating Skills
 
-The AI Bundle provides a console command to validate skills against the specification::
+The :class:`AgentSkills\\Validation\\SkillValidator` validates skills against the specification::
 
-    # Validate all skills
+    use AgentSkills\Validation\SkillValidator;
+
+    $validator = new SkillValidator();
+    $result = $validator->validate($skill);
+
+    if (!$result->isValid()) {
+        foreach ($result->getErrors() as $error) {
+            echo $error;
+        }
+    }
+
+Framework bridges also provide console commands::
+
+    # Symfony
     php bin/console ai:agent:validate-skills
+
+    # Laravel
+    php artisan ai:agent:validate-skills
 
 **Validation checks**:
 
@@ -399,10 +425,9 @@ The AI Bundle provides a console command to validate skills against the specific
 * ``0`` (SUCCESS): All skills are valid
 * ``1`` (FAILURE): At least one skill has validation errors
 
-Skill Discovery
-^^^^^^^^^^^^^^^
+# Skill Discovery
 
-The :class:`Symfony\\AI\\Agent\\Skill\\SkillLoaderInterface` provides methods for efficient skill discovery:
+The :class:`AgentSkills\\SkillLoaderInterface` provides methods for efficient skill discovery:
 
 **Level 1 - Metadata Only** (Lightweight)::
 
@@ -506,10 +531,10 @@ Running Evaluations Programmatically
 
 **Loading an evaluation suite**:
 
-The :class:`Symfony\\AI\\Agent\\Skill\\Evaluation\\EvalSuiteLoader` loads and validates the
+The :class:`AgentSkills\\Evaluation\\EvalSuiteLoader` loads and validates the
 ``evals/evals.json`` file from a skill directory::
 
-    use Symfony\AI\Agent\Skill\Evaluation\EvalSuiteLoader;
+    use AgentSkills\Evaluation\EvalSuiteLoader;
 
     $loader = new EvalSuiteLoader();
     $suite = $loader->load(__DIR__.'/skills/my-skill');
@@ -526,13 +551,14 @@ The :class:`Symfony\\AI\\Agent\\Skill\\Evaluation\\EvalSuiteLoader` loads and va
 
 **Running eval cases against an agent**:
 
-The :class:`Symfony\\AI\\Agent\\Skill\\Evaluation\\Runner\\EvalRunner` executes an eval case
-against an agent and captures timing and token usage::
+The :class:`AgentSkills\\Evaluation\\Runner\\EvalRunner` executes an eval case
+against an agent executor and captures timing and token usage::
 
-    use Symfony\AI\Agent\Skill\Evaluation\Runner\EvalRunner;
+    use AgentSkills\Evaluation\Runner\EvalRunner;
 
-    // $agent is an AgentInterface instance
-    $runner = new EvalRunner($agent);
+    // $executor is an AgentExecutorInterface instance
+    // For Symfony AI, use: new SymfonyAgentExecutor($agent)
+    $runner = new EvalRunner($executor);
 
     foreach ($suite->getEvals() as $evalCase) {
         $result = $runner->run($evalCase);
@@ -542,15 +568,39 @@ against an agent and captures timing and token usage::
         echo $result->getTiming()->getTotalTokens();   // Total tokens used
     }
 
+The :class:`AgentSkills\\Evaluation\\Runner\\AgentExecutorInterface` abstracts the agent call.
+Each AI framework provides its own adapter:
+
+* **Symfony AI**: :class:`AgentSkills\\Bridge\\Symfony\\AI\\Evaluation\\SymfonyAgentExecutor`
+
+::
+
+    use AgentSkills\Bridge\Symfony\AI\Evaluation\SymfonyAgentExecutor;
+
+    // $agent is a Symfony\AI\Agent\AgentInterface instance
+    $executor = new SymfonyAgentExecutor($agent);
+    $runner = new EvalRunner($executor);
+
+* **Laravel AI**: :class:`AgentSkills\\Bridge\\Laravel\\AI\\Evaluation\\LaravelAgentExecutor`
+
+::
+
+    use AgentSkills\Bridge\Laravel\AI\Evaluation\LaravelAgentExecutor;
+
+    // $agent is a Laravel\Ai\Contracts\Agent instance
+    $executor = new LaravelAgentExecutor($agent);
+    $runner = new EvalRunner($executor);
+
 **Grading with LLM**:
 
-The :class:`Symfony\\AI\\Agent\\Skill\\Evaluation\\Grader\\LlmGrader` uses a language model
+The :class:`AgentSkills\\Evaluation\\Grader\\LlmGrader` uses a language model
 to evaluate each assertion against the agent output::
 
-    use Symfony\AI\Agent\Skill\Evaluation\Grader\LlmGrader;
+    use AgentSkills\Evaluation\Grader\LlmGrader;
 
-    // $platform is a PlatformInterface instance
-    $grader = new LlmGrader($platform, 'gpt-4o-mini');
+    // $client is a LlmClientInterface instance
+    // For Symfony AI, use: new SymfonyLlmClient($platform, 'gpt-4o-mini')
+    $grader = new LlmGrader($client);
 
     $gradingResult = $grader->grade(
         $result->getOutput(),
@@ -567,13 +617,36 @@ to evaluate each assertion against the agent output::
         echo $assertion->getEvidence();  // "The output explicitly discusses..."
     }
 
+The :class:`AgentSkills\\Evaluation\\Grader\\LlmClientInterface` abstracts the LLM platform call.
+Each AI framework provides its own adapter:
+
+* **Symfony AI**: :class:`AgentSkills\\Bridge\\Symfony\\AI\\Evaluation\\SymfonyLlmClient`
+
+::
+
+    use AgentSkills\Bridge\Symfony\AI\Evaluation\SymfonyLlmClient;
+
+    // $platform is a Symfony\AI\Platform\PlatformInterface instance
+    $client = new SymfonyLlmClient($platform, 'gpt-4o-mini');
+    $grader = new LlmGrader($client);
+
+* **Laravel AI**: :class:`AgentSkills\\Bridge\\Laravel\\AI\\Evaluation\\LaravelLlmClient`
+
+::
+
+    use AgentSkills\Bridge\Laravel\AI\Evaluation\LaravelLlmClient;
+
+    // $ai is a Laravel\Ai\AiManager instance
+    $client = new LaravelLlmClient($ai, 'openai', 'gpt-4o-mini');
+    $grader = new LlmGrader($client);
+
 **Comparing with and without skill**:
 
-The :class:`Symfony\\AI\\Agent\\Skill\\Evaluation\\Aggregator\\BenchmarkAggregator` computes
+The :class:`AgentSkills\\Evaluation\\Aggregator\\BenchmarkAggregator` computes
 statistics (mean, standard deviation) from multiple eval runs and calculates the delta
 between with-skill and without-skill results::
 
-    use Symfony\AI\Agent\Skill\Evaluation\Aggregator\BenchmarkAggregator;
+    use AgentSkills\Evaluation\Aggregator\BenchmarkAggregator;
 
     $aggregator = new BenchmarkAggregator();
     $benchmark = $aggregator->aggregate($withSkillResults, $withoutSkillResults);
@@ -588,10 +661,10 @@ between with-skill and without-skill results::
 
 **Persisting results**:
 
-The :class:`Symfony\\AI\\Agent\\Skill\\Evaluation\\Workspace\\WorkspaceManager` saves all
+The :class:`AgentSkills\\Evaluation\\Workspace\\WorkspaceManager` saves all
 evaluation artifacts as JSON files in a structured directory::
 
-    use Symfony\AI\Agent\Skill\Evaluation\Workspace\WorkspaceManager;
+    use AgentSkills\Evaluation\Workspace\WorkspaceManager;
 
     $workspace = new WorkspaceManager('/path/to/workspace');
     $workspace->initializeIteration(1);

@@ -4,15 +4,18 @@ declare(strict_types=1);
 
 namespace AgentSkills\Bridge\Symfony\AI\Command;
 
-use Symfony\AI\Agent\Skill\SkillInterface;
-use Symfony\AI\Agent\Skill\SkillLoaderInterface;
-use Symfony\AI\Agent\Skill\Validation\SkillValidatorInterface;
+use AgentSkills\SkillInterface;
+use AgentSkills\SkillLoaderInterface;
+use AgentSkills\Validation\SkillValidatorInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
+
+use function count;
+use function sprintf;
 
 /**
  * @author Guillaume Loulier <contact@guillaumeloulier.fr>
@@ -33,8 +36,7 @@ final class ValidateSkillCommand extends Command
     protected function configure(): void
     {
         $this
-            ->addOption('skill', null, InputOption::VALUE_REQUIRED, 'The name of a specific skill to validate')
-        ;
+            ->addOption('skill', null, InputOption::VALUE_REQUIRED, 'The name of a specific skill to validate');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -55,7 +57,7 @@ final class ValidateSkillCommand extends Command
         $skill = $this->skillLoader->loadSkill($skillName);
 
         if (null === $skill) {
-            $io->error(\sprintf('Skill "%s" not found.', $skillName));
+            $io->error(sprintf('Skill "%s" not found.', $skillName));
 
             return Command::FAILURE;
         }
@@ -64,14 +66,14 @@ final class ValidateSkillCommand extends Command
 
         $io->table(
             ['Skill', 'Status', 'Errors', 'Warnings'],
-            [[$skill->getName(), $result->isValid() ? 'valid' : 'invalid', \count($result->getErrors()), \count($result->getWarnings())]],
+            [[$skill->getName(), $result->isValid() ? 'valid' : 'invalid', count($result->getErrors()), count($result->getWarnings())]],
         );
 
         if ($result->hasWarnings()) {
             $io->section('Warnings');
 
             foreach ($result->getWarnings() as $warning) {
-                $io->writeln(\sprintf(' * %s', $warning));
+                $io->writeln(sprintf(' * %s', $warning));
             }
         }
 
@@ -79,13 +81,13 @@ final class ValidateSkillCommand extends Command
             $io->section('Errors');
 
             foreach ($result->getErrors() as $error) {
-                $io->writeln(\sprintf(' * %s', $error));
+                $io->writeln(sprintf(' * %s', $error));
             }
 
             return Command::FAILURE;
         }
 
-        $io->success(\sprintf('The skill "%s" is valid.', $skill->getName()));
+        $io->success(sprintf('The skill "%s" is valid.', $skill->getName()));
 
         return Command::SUCCESS;
     }
@@ -109,8 +111,8 @@ final class ValidateSkillCommand extends Command
         /** @var SkillInterface $skill */
         foreach ($skills as $skill) {
             $result = $this->skillValidator->validate($skill);
-            $warningCount = \count($result->getWarnings());
-            $errorCount = \count($result->getErrors());
+            $warningCount = count($result->getWarnings());
+            $errorCount = count($result->getErrors());
 
             if ($result->isValid()) {
                 ++$totalValid;
@@ -130,13 +132,13 @@ final class ValidateSkillCommand extends Command
 
             if (!$result->isValid()) {
                 foreach ($result->getErrors() as $error) {
-                    $io->writeln(\sprintf(' * [%s] error: %s', $skill->getName(), $error));
+                    $io->writeln(sprintf(' * [%s] error: %s', $skill->getName(), $error));
                 }
             }
 
             if ($result->hasWarnings()) {
                 foreach ($result->getWarnings() as $warning) {
-                    $io->writeln(\sprintf(' * [%s] warning: %s', $skill->getName(), $warning));
+                    $io->writeln(sprintf(' * [%s] warning: %s', $skill->getName(), $warning));
                 }
             }
         }
@@ -144,10 +146,10 @@ final class ValidateSkillCommand extends Command
         $io->table(['Skill', 'Status', 'Errors', 'Warnings'], $rows);
 
         $io->section('Summary');
-        $io->writeln(\sprintf('Total: %d', \count($skills)));
-        $io->writeln(\sprintf('Valid: %d', $totalValid));
-        $io->writeln(\sprintf('Invalid: %d', $totalInvalid));
-        $io->writeln(\sprintf('Warnings: %d', $totalWarnings));
+        $io->writeln(sprintf('Total: %d', count($skills)));
+        $io->writeln(sprintf('Valid: %d', $totalValid));
+        $io->writeln(sprintf('Invalid: %d', $totalInvalid));
+        $io->writeln(sprintf('Warnings: %d', $totalWarnings));
 
         if ($hasErrors) {
             return Command::FAILURE;

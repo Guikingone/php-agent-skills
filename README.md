@@ -4,6 +4,8 @@ Make sure Composer is installed globally, as explained in the
 [installation chapter](https://getcomposer.org/doc/00-intro.md)
 of the Composer documentation.
 
+## Installation
+
 ```bash
 composer require guikingone/agent-skills
 ```
@@ -11,7 +13,17 @@ composer require guikingone/agent-skills
 ## Quick start - Standalone
 
 ```php
+require_once dirname(__DIR__) . '/vendor/autoload.php';
 
+$loader = new FilesystemSkillLoader([
+    __DIR__ . '/.skills',
+]);
+
+$skill = $loader->loadSkill('twig-component');
+
+assert($skill instanceof SkillInterface);
+
+# Agent call with the loaded skill
 ```
 
 ## Quick start - Symfony
@@ -42,4 +54,46 @@ agent_skills:
             - 'twig-component'
             - 'symfony-console'
         include_index: true
+```
+
+## Quick start - Laravel
+
+Install the package alongside `laravel/ai`:
+
+```bash
+composer require guikingone/agent-skills laravel/ai
+```
+
+The `AgentSkillsServiceProvider` is auto-discovered by Laravel. If auto-discovery is disabled,
+register it manually in `bootstrap/providers.php`:
+
+```php
+return [
+    // ...
+    AgentSkills\Bridge\Laravel\AI\AgentSkillsServiceProvider::class,
+];
+```
+
+Publish and configure `config/agent-skills.php`:
+
+```bash
+php artisan vendor:publish --tag=agent-skills-config
+```
+
+```php
+// config/agent-skills.php
+return [
+    'skills' => [
+        'enabled' => true,
+        'agent' => \App\Agents\MyAgent::class,
+        'directories' => [
+            resource_path('skills'),
+        ],
+        'active_skills' => [
+            'twig-component',
+            'symfony-console',
+        ],
+        'include_index' => true,
+    ],
+];
 ```

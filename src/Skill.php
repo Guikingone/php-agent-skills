@@ -1,17 +1,11 @@
 <?php
 
-/*
- * This file is part of the Symfony package.
- *
- * (c) Fabien Potencier <fabien@symfony.com>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
- */
+declare(strict_types=1);
 
 namespace AgentSkills;
 
 use AgentSkills\Exception\RuntimeException;
+use Closure;
 
 /**
  * Represents a fully loaded Agent Skill.
@@ -28,9 +22,9 @@ final class Skill implements SkillInterface
     public function __construct(
         private readonly string $body,
         private readonly SkillMetadataInterface $metadata,
-        private readonly ?\Closure $scriptsLoader = null,
-        private readonly ?\Closure $referencesLoader = null,
-        private readonly ?\Closure $assetsLoader = null,
+        private readonly ?Closure $scriptsLoader = null,
+        private readonly ?Closure $referencesLoader = null,
+        private readonly ?Closure $assetsLoader = null,
     ) {
     }
 
@@ -57,9 +51,9 @@ final class Skill implements SkillInterface
     /**
      * Returns the absolute path to a script file.
      *
-     * @return string The absolute path to the script
-     *
      * @throws RuntimeException if the script does not exist
+     *
+     * @return string The absolute path to the script
      */
     public function loadScript(string $script): mixed
     {

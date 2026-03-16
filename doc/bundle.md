@@ -8,52 +8,48 @@ directories and remote GitHub repositories.
 Skills stored in local directories are loaded by the default filesystem loader:
 
 ```yaml
-ai:
-    agent:
-        my_agent:
-            model: 'gpt-4o-mini'
-            skills:
-                enabled: true
-                directories:
-                    - '%kernel.project_dir%/skills'
-                    - '%kernel.project_dir%/vendor/my-org/shared-skills'
-                active_skills:
-                    - 'twig-component'
-                    - 'symfony-console'
-                include_index: true
+agent_skills:
+    skills:
+        enabled: true
+        agent: 'my_agent'
+        directories:
+            - '%kernel.project_dir%/skills'
+            - '%kernel.project_dir%/vendor/my-org/shared-skills'
+        active_skills:
+            - 'twig-component'
+            - 'symfony-console'
+        include_index: true
 ```
 
 ## GitHub Skills
 
 Skills can be loaded from GitHub repositories using the ``github_repositories`` option. When
-configured alongside ``directories``, a :class:`Symfony\\AI\\Agent\\Skill\\ChainSkillLoader`
+configured alongside ``directories``, a ``AgentSkills\ChainSkillLoader``
 is automatically created to transparently compose both loaders:
 
-.. code-block:: yaml
+```yaml
+agent_skills:
+    skills:
+        enabled: true
+        agent: 'my_agent'
+        directories:
+            - '%kernel.project_dir%/skills'
+        github_repositories:
+            # Public repository
+            - repository: 'my-org/shared-skills'
 
-    ai:
-        agent:
-            my_agent:
-                model: 'gpt-4o-mini'
-                skills:
-                    enabled: true
-                    directories:
-                        - '%kernel.project_dir%/skills'
-                    github_repositories:
-                        # Public repository
-                        - repository: 'my-org/shared-skills'
+            # Private repository with authentication
+            - repository: 'my-org/private-skills'
+              token: '%env(GITHUB_TOKEN)%'
 
-                        # Private repository with authentication
-                        - repository: 'my-org/private-skills'
-                          token: '%env(GITHUB_TOKEN)%'
-
-                        # Custom branch and subdirectory
-                        - repository: 'my-org/monorepo'
-                          path: 'ai/skills'
-                          branch: 'develop'
-                          token: '%env(GITHUB_TOKEN)%'
-                    active_skills:
-                        - 'twig-component'
+            # Custom branch and subdirectory
+            - repository: 'my-org/monorepo'
+              path: 'ai/skills'
+              branch: 'develop'
+              token: '%env(GITHUB_TOKEN)%'
+        active_skills:
+            - 'twig-component'
+```
 
 Each repository entry supports:
 
@@ -69,40 +65,35 @@ precedence over GitHub skills with the same name.
 
 To use only GitHub-based skills without local directories:
 
-.. code-block:: yaml
-
-    ai:
-        agent:
-            my_agent:
-                model: 'gpt-4o-mini'
-                skills:
-                    enabled: true
-                    directories: []
-                    github_repositories:
-                        - repository: 'my-org/skills'
-                    active_skills:
-                        - 'my-skill'
+```yaml
+agent_skills:
+    skills:
+        enabled: true
+        agent: 'my_agent'
+        directories: []
+        github_repositories:
+            - repository: 'my-org/skills'
+        active_skills:
+            - 'my-skill'
+```
 
 ## Skills as Tools
 
-When tools are enabled, active skills are automatically registered as callable tools. The agent
-can then decide when to consult specific skills:
+When an ``agent`` identifier is defined in the skills configuration, active skills are
+automatically registered as callable tools for that agent. No separate ``tools`` flag is needed:
 
-.. code-block:: yaml
-
-    ai:
-        agent:
-            my_agent:
-                model: 'gpt-4o-mini'
-                tools: true
-                skills:
-                    enabled: true
-                    directories:
-                        - '%kernel.project_dir%/skills'
-                    github_repositories:
-                        - repository: 'my-org/skills'
-                    active_skills:
-                        - 'twig-component'
+```yaml
+agent_skills:
+    skills:
+        enabled: true
+        agent: 'my_agent'
+        directories:
+            - '%kernel.project_dir%/skills'
+        github_repositories:
+            - repository: 'my-org/skills'
+        active_skills:
+            - 'twig-component'
+```
 
 Each active skill is registered as a tool named ``skill_{name}`` (with dashes converted to
 underscores). The agent can call these tools to load skill content, reference files, and
@@ -111,24 +102,22 @@ execute scripts on demand.
 ## Skill Evaluation
 
 The evaluation system measures how well an agent performs with and without a skill. Configure
-it under the ``evaluation`` key within your skills configuration:
+it under the ``evaluation`` key:
 
-.. code-block:: yaml
-
-    ai:
-        agent:
-            my_agent:
-                model: 'gpt-4o-mini'
-                skills:
-                    enabled: true
-                    directories:
-                        - '%kernel.project_dir%/skills'
-                    active_skills:
-                        - 'my-skill'
-                    evaluation:
-                        workspace: '%kernel.project_dir%/var/skill-evals'
-                        grading_model: 'gpt-4o-mini'
-                        grading_platform: 'ai.platform.openai'
+```yaml
+agent_skills:
+    skills:
+        enabled: true
+        agent: 'my_agent'
+        directories:
+            - '%kernel.project_dir%/skills'
+        active_skills:
+            - 'my-skill'
+    evaluation:
+        workspace: '%kernel.project_dir%/var/skill-evals'
+        grading_model: 'gpt-4o-mini'
+        grading_platform: 'ai.platform.openai'
+```
 
 Configuration options:
 
@@ -138,7 +127,5 @@ Configuration options:
 * ``grading_platform`` (string, optional): Platform service reference for the grading model
   (e.g. ``ai.platform.openai``)
 
-.. note::
-
-    Both ``grading_model`` and ``grading_platform`` must be configured to enable LLM grading.
-    Without them, the evaluation still runs but assertions are not graded.
+> **Note:** Both ``grading_model`` and ``grading_platform`` must be configured to enable LLM grading.
+> Without them, the evaluation still runs but assertions are not graded.

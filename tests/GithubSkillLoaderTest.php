@@ -1,32 +1,27 @@
 <?php
 
-/*
- * This file is part of the Symfony package.
- *
- * (c) Fabien Potencier <fabien@symfony.com>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
- */
+declare(strict_types=1);
 
-namespace AgentSkills\Tests\Skill;
+namespace AgentSkills\Tests;
 
-use PHPUnit\Framework\TestCase;
 use AgentSkills\GithubSkillLoader;
 use AgentSkills\SkillParser;
 use AgentSkills\Validation\SkillValidator;
+use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
+
+use function json_encode;
 
 final class GithubSkillLoaderTest extends TestCase
 {
     private const SKILL_CONTENT = <<<'MD'
----
-name: test-skill
-description: A test skill loaded from GitHub
----
-Do something useful.
-MD;
+        ---
+        name: test-skill
+        description: A test skill loaded from GitHub
+        ---
+        Do something useful.
+        MD;
 
     public function testDiscoverMetadataListsSkillDirectories()
     {
@@ -41,12 +36,12 @@ MD;
             new MockResponse(self::SKILL_CONTENT),
             // Fetch other-skill/SKILL.md
             new MockResponse(<<<'MD'
----
-name: other-skill
-description: Another skill from GitHub
----
-Other instructions.
-MD),
+                ---
+                name: other-skill
+                description: Another skill from GitHub
+                ---
+                Other instructions.
+                MD),
         ];
 
         $loader = $this->createLoader($responses);

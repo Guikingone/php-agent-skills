@@ -1,21 +1,14 @@
 <?php
 
-/*
- * This file is part of the Symfony package.
- *
- * (c) Fabien Potencier <fabien@symfony.com>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
- */
+declare(strict_types=1);
 
-namespace AgentSkills\Tests\Skill;
+namespace AgentSkills\Tests;
 
-use PHPUnit\Framework\TestCase;
 use AgentSkills\ChainSkillLoader;
 use AgentSkills\Skill;
 use AgentSkills\SkillLoaderInterface;
 use AgentSkills\SkillMetadata;
+use PHPUnit\Framework\TestCase;
 
 final class ChainSkillLoaderTest extends TestCase
 {

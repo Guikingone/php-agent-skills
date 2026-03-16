@@ -1,49 +1,29 @@
 <?php
 
-/*
- * This file is part of the Symfony package.
- *
- * (c) Fabien Potencier <fabien@symfony.com>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
- */
+declare(strict_types=1);
 
-namespace AgentSkills\Tests\Skill\Evaluation\Runner;
+namespace AgentSkills\Tests\Evaluation\Runner;
 
-use PHPUnit\Framework\TestCase;
-use Symfony\AI\Agent\AgentInterface;
 use AgentSkills\Evaluation\EvalCase;
+use AgentSkills\Evaluation\Runner\AgentExecutionResult;
+use AgentSkills\Evaluation\Runner\AgentExecutorInterface;
 use AgentSkills\Evaluation\Runner\EvalRunner;
-use Symfony\AI\Platform\Message\MessageBag;
-use Symfony\AI\Platform\Metadata\Metadata;
-use Symfony\AI\Platform\Result\ResultInterface;
-use Symfony\AI\Platform\TokenUsage\TokenUsage;
+use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
 
 final class EvalRunnerTest extends TestCase
 {
     public function testRunSendsPromptAndCapturesTiming()
     {
-        $result = $this->createMock(ResultInterface::class);
-        $result->method('getContent')->willReturn('Agent response text');
-
-        $metadata = new Metadata();
-        $result->method('getMetadata')->willReturn($metadata);
-
-        $agent = $this->createMock(AgentInterface::class);
-        $agent->expects($this->once())
-            ->method('call')
-            ->with($this->callback(static function (MessageBag $bag): bool {
-                $userMessage = $bag->getUserMessage();
-
-                return null !== $userMessage;
-            }))
-            ->willReturn($result);
+        $executor = $this->createMock(AgentExecutorInterface::class);
+        $executor->expects($this->once())
+            ->method('execute')
+            ->with('What is PHP?')
+            ->willReturn(new AgentExecutionResult('Agent response text', 0));
 
         $clock = new MockClock('2026-01-01 10:00:00');
 
-        $runner = new EvalRunner($agent, $clock);
+        $runner = new EvalRunner($executor, $clock);
         $evalCase = new EvalCase(1, 'What is PHP?', 'A language');
 
         $runResult = $runner->run($evalCase);
@@ -56,21 +36,13 @@ final class EvalRunnerTest extends TestCase
 
     public function testRunExtractsTokenUsage()
     {
-        $tokenUsage = new TokenUsage(promptTokens: 50, completionTokens: 100, totalTokens: 150);
-
-        $metadata = new Metadata();
-        $metadata->add('token_usage', $tokenUsage);
-
-        $result = $this->createMock(ResultInterface::class);
-        $result->method('getContent')->willReturn('Response');
-        $result->method('getMetadata')->willReturn($metadata);
-
-        $agent = $this->createMock(AgentInterface::class);
-        $agent->method('call')->willReturn($result);
+        $executor = $this->createMock(AgentExecutorInterface::class);
+        $executor->method('execute')
+            ->willReturn(new AgentExecutionResult('Response', 150));
 
         $clock = new MockClock('2026-01-01 10:00:00');
 
-        $runner = new EvalRunner($agent, $clock);
+        $runner = new EvalRunner($executor, $clock);
         $runResult = $runner->run(new EvalCase(1, 'prompt', 'expected'));
 
         $this->assertSame(150, $runResult->getTiming()->getTotalTokens());

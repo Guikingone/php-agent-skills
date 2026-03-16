@@ -1,13 +1,6 @@
 <?php
 
-/*
- * This file is part of the Symfony package.
- *
- * (c) Fabien Potencier <fabien@symfony.com>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
- */
+declare(strict_types=1);
 
 namespace AgentSkills\Validation;
 
@@ -19,7 +12,7 @@ use AgentSkills\SkillInterface;
 final class SkillValidationResult implements SkillValidationResultInterface
 {
     /**
-     * @param string[] $errors   Validation errors (spec violations)
+     * @param string[] $errors Validation errors (spec violations)
      * @param string[] $warnings Validation warnings (best-practice recommendations)
      */
     public function __construct(

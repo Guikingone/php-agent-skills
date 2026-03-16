@@ -1,15 +1,11 @@
 <?php
 
-/*
- * This file is part of the Symfony package.
- *
- * (c) Fabien Potencier <fabien@symfony.com>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
- */
+declare(strict_types=1);
 
 namespace AgentSkills\Evaluation;
+
+use function array_map;
+use function count;
 
 /**
  * Aggregates assertion results into a grading summary.
@@ -33,7 +29,7 @@ final class GradingResult implements GradingResultInterface
 
     public function getSummary(): array
     {
-        $total = \count($this->assertionResults);
+        $total = count($this->assertionResults);
         $passed = 0;
 
         foreach ($this->assertionResults as $result) {
@@ -53,7 +49,7 @@ final class GradingResult implements GradingResultInterface
     public function toArray(): array
     {
         return [
-            'assertions' => array_map(
+            'assertion_results' => array_map(
                 static fn (AssertionResult $r): array => $r->toArray(),
                 $this->assertionResults,
             ),

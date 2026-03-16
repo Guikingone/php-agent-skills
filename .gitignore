@@ -4,3 +4,10 @@
 # Composer
 vendor
 composer.lock
+
+# Tools
+.phpunit.result.cache
+.php-cs-fixer.cache
+
+# Extra
+.claude

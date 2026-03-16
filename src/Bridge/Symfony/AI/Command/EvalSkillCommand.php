@@ -4,14 +4,15 @@ declare(strict_types=1);
 
 namespace AgentSkills\Bridge\Symfony\AI\Command;
 
+use AgentSkills\Bridge\Symfony\AI\Evaluation\SymfonyAgentExecutor;
+use AgentSkills\Evaluation\Aggregator\BenchmarkAggregatorInterface;
+use AgentSkills\Evaluation\EvalRunResult;
+use AgentSkills\Evaluation\EvalSuite;
+use AgentSkills\Evaluation\EvalSuiteLoaderInterface;
+use AgentSkills\Evaluation\Grader\GraderInterface;
+use AgentSkills\Evaluation\Runner\EvalRunner;
+use AgentSkills\Evaluation\Workspace\WorkspaceManagerInterface;
 use Symfony\AI\Agent\AgentInterface;
-use Symfony\AI\Agent\Skill\Evaluation\Aggregator\BenchmarkAggregatorInterface;
-use Symfony\AI\Agent\Skill\Evaluation\EvalRunResult;
-use Symfony\AI\Agent\Skill\Evaluation\EvalSuite;
-use Symfony\AI\Agent\Skill\Evaluation\EvalSuiteLoaderInterface;
-use Symfony\AI\Agent\Skill\Evaluation\Grader\GraderInterface;
-use Symfony\AI\Agent\Skill\Evaluation\Runner\EvalRunner;
-use Symfony\AI\Agent\Skill\Evaluation\Workspace\WorkspaceManagerInterface;
 use Symfony\Component\Clock\ClockInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -21,6 +22,11 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\DependencyInjection\ServiceLocator;
+use Throwable;
+
+use function count;
+use function mb_substr;
+use function sprintf;
 
 /**
  * @author Guillaume Loulier <contact@guillaumeloulier.fr>
@@ -53,8 +59,7 @@ final class EvalSkillCommand extends Command
             ->addOption('iteration', 'i', InputOption::VALUE_REQUIRED, 'Iteration number', '1')
             ->addOption('agent', null, InputOption::VALUE_REQUIRED, 'Agent service name for with-skill runs')
             ->addOption('baseline-agent', null, InputOption::VALUE_REQUIRED, 'Agent service name for without-skill (baseline) runs')
-            ->addOption('skip-grading', null, InputOption::VALUE_NONE, 'Skip LLM grading')
-        ;
+            ->addOption('skip-grading', null, InputOption::VALUE_NONE, 'Skip LLM grading');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -67,14 +72,14 @@ final class EvalSkillCommand extends Command
 
         try {
             $suite = $this->evalSuiteLoader->load($skillDirectory);
-        } catch (\Throwable $e) {
-            $io->error(\sprintf('Failed to load eval suite: %s', $e->getMessage()));
+        } catch (Throwable $e) {
+            $io->error(sprintf('Failed to load eval suite: %s', $e->getMessage()));
 
             return Command::FAILURE;
         }
 
-        $io->title(\sprintf('Evaluating skill: %s', $suite->getSkillName()));
-        $io->writeln(\sprintf('Found %d eval case(s)', \count($suite->getEvals())));
+        $io->title(sprintf('Evaluating skill: %s', $suite->getSkillName()));
+        $io->writeln(sprintf('Found %d eval case(s)', count($suite->getEvals())));
 
         $agentName = $input->getOption('agent');
         $baselineAgentName = $input->getOption('baseline-agent');
@@ -86,7 +91,7 @@ final class EvalSkillCommand extends Command
         }
 
         if (!$this->agentLocator->has($agentName)) {
-            $io->error(\sprintf('Agent "%s" not found.', $agentName));
+            $io->error(sprintf('Agent "%s" not found.', $agentName));
 
             return Command::FAILURE;
         }
@@ -98,7 +103,7 @@ final class EvalSkillCommand extends Command
         $withoutSkillResults = [];
         if (null !== $baselineAgentName) {
             if (!$this->agentLocator->has($baselineAgentName)) {
-                $io->error(\sprintf('Baseline agent "%s" not found.', $baselineAgentName));
+                $io->error(sprintf('Baseline agent "%s" not found.', $baselineAgentName));
 
                 return Command::FAILURE;
             }
@@ -116,14 +121,14 @@ final class EvalSkillCommand extends Command
             $io->table(
                 ['Metric', 'With Skill', 'Without Skill', 'Delta'],
                 [
-                    ['Pass Rate', \sprintf('%.2f', $benchmark->getWithSkillPassRate()->getMean()), \sprintf('%.2f', $benchmark->getWithoutSkillPassRate()->getMean()), \sprintf('%+.2f', $delta['pass_rate'])],
-                    ['Time (ms)', \sprintf('%.0f', $benchmark->getWithSkillTime()->getMean()), \sprintf('%.0f', $benchmark->getWithoutSkillTime()->getMean()), \sprintf('%+.0f', $delta['time_ms'])],
-                    ['Tokens', \sprintf('%.0f', $benchmark->getWithSkillTokens()->getMean()), \sprintf('%.0f', $benchmark->getWithoutSkillTokens()->getMean()), \sprintf('%+.0f', $delta['tokens'])],
+                    ['Pass Rate', sprintf('%.2f', $benchmark->getWithSkillPassRate()->getMean()), sprintf('%.2f', $benchmark->getWithoutSkillPassRate()->getMean()), sprintf('%+.2f', $delta['pass_rate'])],
+                    ['Time (s)', sprintf('%.1f', $benchmark->getWithSkillTime()->getMean() / 1000), sprintf('%.1f', $benchmark->getWithoutSkillTime()->getMean() / 1000), sprintf('%+.1f', $delta['time_seconds'])],
+                    ['Tokens', sprintf('%.0f', $benchmark->getWithSkillTokens()->getMean()), sprintf('%.0f', $benchmark->getWithoutSkillTokens()->getMean()), sprintf('%+.0f', $delta['tokens'])],
                 ],
             );
         }
 
-        $io->success(\sprintf('Evaluation complete. Results saved to iteration-%d.', $iteration));
+        $io->success(sprintf('Evaluation complete. Results saved to iteration-%d.', $iteration));
 
         return Command::SUCCESS;
     }
@@ -135,13 +140,13 @@ final class EvalSkillCommand extends Command
     {
         /** @var AgentInterface $agent */
         $agent = $this->agentLocator->get($agentName);
-        $runner = new EvalRunner($agent, $this->clock);
+        $runner = new EvalRunner(new SymfonyAgentExecutor($agent), $this->clock);
 
-        $io->section(\sprintf('Running %s evals with agent "%s"', $configuration, $agentName));
+        $io->section(sprintf('Running %s evals with agent "%s"', $configuration, $agentName));
 
         $results = [];
         foreach ($suite->getEvals() as $evalCase) {
-            $io->write(\sprintf('  Eval #%d: %s ... ', $evalCase->getId(), mb_substr($evalCase->getPrompt(), 0, 50)));
+            $io->write(sprintf('  Eval #%d: %s ... ', $evalCase->getId(), mb_substr($evalCase->getPrompt(), 0, 50)));
 
             $runResult = $runner->run($evalCase);
 
@@ -155,13 +160,16 @@ final class EvalSkillCommand extends Command
                 $this->workspaceManager->saveGradingResult($evalDir, $grading);
 
                 $summary = $grading->getSummary();
-                $io->writeln(\sprintf('<info>%d/%d passed</info> (%dms, %d tokens)',
-                    $summary['passed'], $summary['total'],
+                $io->writeln(sprintf(
+                    '<info>%d/%d passed</info> (%dms, %d tokens)',
+                    $summary['passed'],
+                    $summary['total'],
                     $runResult->getTiming()->getDurationMs(),
                     $runResult->getTiming()->getTotalTokens(),
                 ));
             } else {
-                $io->writeln(\sprintf('done (%dms, %d tokens)',
+                $io->writeln(sprintf(
+                    'done (%dms, %d tokens)',
                     $runResult->getTiming()->getDurationMs(),
                     $runResult->getTiming()->getTotalTokens(),
                 ));

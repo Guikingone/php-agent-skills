@@ -6,5 +6,4 @@ namespace AgentSkills\Exception;
 
 final class RuntimeException extends \RuntimeException
 {
-
 }

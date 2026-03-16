@@ -1,20 +1,23 @@
 <?php
 
-/*
- * This file is part of the Symfony package.
- *
- * (c) Fabien Potencier <fabien@symfony.com>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
- */
+declare(strict_types=1);
 
 namespace AgentSkills;
 
 use AgentSkills\Exception\InvalidArgumentException;
 use AgentSkills\Exception\RuntimeException;
+use Closure;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\String\UnicodeString;
+
+use function array_filter;
+use function array_map;
+use function array_values;
+use function basename;
+use function is_array;
+use function is_dir;
+use function is_string;
+use function sprintf;
 
 /**
  * Parses a SKILL.md file into a Skill object.
@@ -34,10 +37,10 @@ final class SkillParser implements SkillParserInterface
 
     public function parse(string $directory): SkillInterface
     {
-        $skillFile = (new UnicodeString($directory))->trimEnd('/').'/SKILL.md';
+        $skillFile = (new UnicodeString($directory))->trimEnd('/') . '/SKILL.md';
 
         if (!$this->filesystem->exists($skillFile)) {
-            throw new InvalidArgumentException(\sprintf('SKILL.md not found in directory "%s".', $directory));
+            throw new InvalidArgumentException(sprintf('SKILL.md not found in directory "%s".', $directory));
         }
 
         $content = $this->filesystem->readFile($skillFile);
@@ -46,51 +49,56 @@ final class SkillParser implements SkillParserInterface
 
         $metadata = $this->buildMetadata($frontmatter, $skillFile);
 
+        $directoryName = basename($directory);
+        if ($metadata->getName() !== $directoryName) {
+            throw new InvalidArgumentException(sprintf('Skill name "%s" must match parent directory name "%s" in "%s".', $metadata->getName(), $directoryName, $skillFile));
+        }
+
         return new Skill(
             $body,
             $metadata,
             function (string $script) use ($directory): string {
-                $scriptsPath = $directory.'/scripts';
+                $scriptsPath = $directory . '/scripts';
 
                 if (!$this->filesystem->exists($scriptsPath) || !is_dir($scriptsPath)) {
-                    throw new RuntimeException(\sprintf('Scripts directory not found in skill "%s".', $directory));
+                    throw new RuntimeException(sprintf('Scripts directory not found in skill "%s".', $directory));
                 }
 
-                $scriptPath = $scriptsPath.'/'.$script;
+                $scriptPath = $scriptsPath . '/' . $script;
 
                 if (!$this->filesystem->exists($scriptPath)) {
-                    throw new RuntimeException(\sprintf('Script "%s" not found in skill scripts directory.', $script));
+                    throw new RuntimeException(sprintf('Script "%s" not found in skill scripts directory.', $script));
                 }
 
                 return $scriptPath;
             },
             function (string $reference) use ($directory): ?string {
-                $path = $this->filesystem->exists($directory.'/references') && is_dir($directory.'/references') ? $directory.'/references' : null;
+                $path = $this->filesystem->exists($directory . '/references') && is_dir($directory . '/references') ? $directory . '/references' : null;
 
                 if (null === $path) {
                     return null;
                 }
 
-                return $this->filesystem->readFile($path.'/'.$reference);
+                return $this->filesystem->readFile($path . '/' . $reference);
             },
             function (string $asset) use ($directory): ?string {
-                $path = $this->filesystem->exists($directory.'/assets') && is_dir($directory.'/assets') ? $directory.'/assets' : null;
+                $path = $this->filesystem->exists($directory . '/assets') && is_dir($directory . '/assets') ? $directory . '/assets' : null;
 
                 if (null === $path) {
                     return null;
                 }
 
-                return $this->filesystem->readFile($path.'/'.$asset);
+                return $this->filesystem->readFile($path . '/' . $asset);
             },
         );
     }
 
     public function parseMetadataOnly(string $directory): SkillMetadataInterface
     {
-        $skillFile = (new UnicodeString($directory))->trimEnd('/').'/SKILL.md';
+        $skillFile = (new UnicodeString($directory))->trimEnd('/') . '/SKILL.md';
 
         if (!$this->filesystem->exists($skillFile)) {
-            throw new InvalidArgumentException(\sprintf('SKILL.md not found in directory "%s".', $directory));
+            throw new InvalidArgumentException(sprintf('SKILL.md not found in directory "%s".', $directory));
         }
 
         $content = $this->filesystem->readFile($skillFile);
@@ -103,9 +111,9 @@ final class SkillParser implements SkillParserInterface
     public function parseFromContent(
         string $content,
         string $source,
-        ?\Closure $scriptsLoader = null,
-        ?\Closure $referencesLoader = null,
-        ?\Closure $assetsLoader = null,
+        ?Closure $scriptsLoader = null,
+        ?Closure $referencesLoader = null,
+        ?Closure $assetsLoader = null,
     ): SkillInterface {
         [$frontmatter, $body] = $this->extractFrontmatter($content, $source);
 
@@ -130,13 +138,13 @@ final class SkillParser implements SkillParserInterface
         $trimmedContent = $unicodeContent->trimStart();
 
         if (!$trimmedContent->startsWith('---')) {
-            throw new InvalidArgumentException(\sprintf('SKILL.md "%s" must start with YAML frontmatter (--- delimiter).', $file));
+            throw new InvalidArgumentException(sprintf('SKILL.md "%s" must start with YAML frontmatter (--- delimiter).', $file));
         }
 
         $matches = $trimmedContent->match('/^---\s*\n(.+?)\n---\s*\n?(.*)/s');
 
         if ([] === $matches) {
-            throw new InvalidArgumentException(\sprintf('Unable to parse YAML frontmatter in "%s".', $file));
+            throw new InvalidArgumentException(sprintf('Unable to parse YAML frontmatter in "%s".', $file));
         }
 
         $yamlString = $matches[1];
@@ -152,16 +160,16 @@ final class SkillParser implements SkillParserInterface
      */
     private function buildMetadata(array $frontmatter, string $file): SkillMetadata
     {
-        if (!isset($frontmatter['name']) || !\is_string($frontmatter['name'])) {
-            throw new InvalidArgumentException(\sprintf('Missing or invalid required field "name" in "%s".', $file));
+        if (!isset($frontmatter['name']) || !is_string($frontmatter['name'])) {
+            throw new InvalidArgumentException(sprintf('Missing or invalid required field "name" in "%s".', $file));
         }
 
-        if (!isset($frontmatter['description']) || !\is_string($frontmatter['description'])) {
-            throw new InvalidArgumentException(\sprintf('Missing or invalid required field "description" in "%s".', $file));
+        if (!isset($frontmatter['description']) || !is_string($frontmatter['description'])) {
+            throw new InvalidArgumentException(sprintf('Missing or invalid required field "description" in "%s".', $file));
         }
 
         $allowedTools = [];
-        if (isset($frontmatter['allowed-tools']) && \is_string($frontmatter['allowed-tools'])) {
+        if (isset($frontmatter['allowed-tools']) && is_string($frontmatter['allowed-tools'])) {
             $toolsString = new UnicodeString($frontmatter['allowed-tools']);
 
             $allowedTools = array_map(
@@ -175,10 +183,10 @@ final class SkillParser implements SkillParserInterface
         return new SkillMetadata(
             $frontmatter['name'],
             $frontmatter['description'],
-            isset($frontmatter['license']) && \is_string($frontmatter['license']) ? $frontmatter['license'] : null,
+            isset($frontmatter['license']) && is_string($frontmatter['license']) ? $frontmatter['license'] : null,
             $allowedTools,
-            isset($frontmatter['compatibility']) && \is_string($frontmatter['compatibility']) ? $frontmatter['compatibility'] : null,
-            isset($frontmatter['metadata']) && \is_array($frontmatter['metadata']) ? $frontmatter['metadata'] : [],
+            isset($frontmatter['compatibility']) && is_string($frontmatter['compatibility']) ? $frontmatter['compatibility'] : null,
+            isset($frontmatter['metadata']) && is_array($frontmatter['metadata']) ? $frontmatter['metadata'] : [],
             $frontmatter,
         );
     }
@@ -195,17 +203,16 @@ final class SkillParser implements SkillParserInterface
         $lines = (new UnicodeString($yaml))->split("\n");
 
         foreach ($lines as $line) {
-            $unicodeLine = new UnicodeString($line);
-            $trimmedLine = $unicodeLine->trim();
+            $trimmedLine = $line->trim();
 
             if ($trimmedLine->isEmpty() || $trimmedLine->startsWith('#')) {
                 continue;
             }
 
-            $nestedMatch = $unicodeLine->match('/^(\s{2,})([\w][\w-]*):\s*(.*)$/');
+            $nestedMatch = $line->match('/^(\s{2,})([\w][\w-]*):\s*(.*)$/');
             if ([] !== $nestedMatch && null !== $currentKey) {
                 $value = (new UnicodeString($nestedMatch[3]))->trim()->trim('"\'')->toString();
-                if (!isset($result[$currentKey]) || !\is_array($result[$currentKey])) {
+                if (!isset($result[$currentKey]) || !is_array($result[$currentKey])) {
                     $result[$currentKey] = [];
                 }
 
@@ -214,7 +221,7 @@ final class SkillParser implements SkillParserInterface
                 continue;
             }
 
-            $topMatch = $unicodeLine->match('/^([\w][\w-]*):\s*(.*)$/');
+            $topMatch = $line->match('/^([\w][\w-]*):\s*(.*)$/');
             if ([] !== $topMatch) {
                 $key = $topMatch[1];
                 $value = (new UnicodeString($topMatch[2]))->trim()->trim('"\'')->toString();

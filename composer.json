@@ -1,7 +1,7 @@
 {
+    "name": "guikingone/agent-skills",
     "type": "library",
     "license": "MIT",
-    "name": "guikingone/agent-skills",
     "description": "A library that integrate agent skills standard",
     "authors": [
         {
@@ -27,20 +27,28 @@
         }
     },
     "require": {
-        "php": ">= 8.2",
-        "symfony/filesystem": "^7.3|^8.0",
-        "symfony/finder": "^7.3|^8.0",
-        "symfony/http-client": "^7.3|^8.0",
-        "symfony/string": "^7.3|^8.0"
+        "php": ">=8.3",
+        "symfony/clock": "^7.4|^8.0",
+        "symfony/filesystem": "^7.4|^8.0",
+        "symfony/finder": "^7.4|^8.0",
+        "symfony/http-client": "^7.4|^8.0",
+        "symfony/string": "^7.4|^8.0"
+    },
+    "suggest": {
+        "laravel/ai": "Required for the Laravel AI bridge",
+        "symfony/ai-agent": "Required for the Symfony AI bridge"
     },
     "require-dev": {
         "friendsofphp/php-cs-fixer": "^3.94",
-        "laravel/ai": "^0.2.8",
+        "laravel/ai": "^0.3",
         "phpstan/phpstan": "^2.1",
-        "phpunit/phpunit": "^13.0",
+        "phpstan/phpstan-deprecation-rules": "^2.0",
+        "phpstan/phpstan-phpunit": "^2.0",
+        "phpunit/phpunit": "^11.5",
         "rector/rector": "^2.3",
         "symfony/ai-agent": "^0.6.0",
-        "symfony/config": "^7.3|^8.0",
-        "symfony/console": "^7.4"
+        "symfony/config": "^7.4|^8.0",
+        "symfony/console": "^7.4",
+        "symfony/dependency-injection": "^7.4|^8.0"
     }
 }

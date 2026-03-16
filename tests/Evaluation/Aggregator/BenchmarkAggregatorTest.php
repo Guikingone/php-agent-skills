@@ -1,23 +1,16 @@
 <?php
 
-/*
- * This file is part of the Symfony package.
- *
- * (c) Fabien Potencier <fabien@symfony.com>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
- */
+declare(strict_types=1);
 
-namespace AgentSkills\Tests\Skill\Evaluation\Aggregator;
+namespace AgentSkills\Tests\Evaluation\Aggregator;
 
-use PHPUnit\Framework\TestCase;
 use AgentSkills\Evaluation\Aggregator\BenchmarkAggregator;
 use AgentSkills\Evaluation\AssertionResult;
 use AgentSkills\Evaluation\EvalCase;
 use AgentSkills\Evaluation\EvalRunResult;
 use AgentSkills\Evaluation\GradingResult;
 use AgentSkills\Evaluation\TimingResult;
+use PHPUnit\Framework\TestCase;
 
 final class BenchmarkAggregatorTest extends TestCase
 {
@@ -61,7 +54,7 @@ final class BenchmarkAggregatorTest extends TestCase
         $delta = $result->getDelta();
 
         $this->assertEqualsWithDelta(0.5, $delta['pass_rate'], 0.001);
-        $this->assertEqualsWithDelta(500.0, $delta['time_ms'], 0.001);
+        $this->assertEqualsWithDelta(0.5, $delta['time_seconds'], 0.001);
         $this->assertEqualsWithDelta(100.0, $delta['tokens'], 0.001);
     }
 

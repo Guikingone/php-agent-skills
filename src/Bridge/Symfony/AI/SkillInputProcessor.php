@@ -9,6 +9,9 @@ use AgentSkills\SkillLoaderInterface;
 use Symfony\AI\Agent\Input;
 use Symfony\AI\Agent\InputProcessorInterface;
 
+use function implode;
+use function sprintf;
+
 /**
  * Injects discovered Agent Skills instructions into the agent's input.
  *
@@ -23,7 +26,7 @@ final class SkillInputProcessor implements InputProcessorInterface
 {
     /**
      * @param string[] $activeSkills Skill names to fully load (Level 2), empty = metadata only
-     * @param bool     $includeIndex Whether to include a skill index in the system prompt
+     * @param bool $includeIndex Whether to include a skill index in the system prompt
      */
     public function __construct(
         private readonly SkillLoaderInterface $loader,
@@ -42,7 +45,7 @@ final class SkillInputProcessor implements InputProcessorInterface
             if ([] !== $metadata) {
                 $index = "## Available Skills\n";
                 foreach ($metadata as $meta) {
-                    $index .= \sprintf("- **%s**: %s\n", $meta->getName(), $meta->getDescription());
+                    $index .= sprintf("- **%s**: %s\n", $meta->getName(), $meta->getDescription());
                 }
 
                 $systemPromptParts[] = $index;
@@ -56,14 +59,14 @@ final class SkillInputProcessor implements InputProcessorInterface
                 continue;
             }
 
-            $systemPromptParts[] = \sprintf("## Skill: %s\n\n%s", $skill->getName(), $skill->getBody());
+            $systemPromptParts[] = sprintf("## Skill: %s\n\n%s", $skill->getName(), $skill->getBody());
         }
 
         $options = $input->getOptions();
 
         if ([] !== $systemPromptParts) {
-            $skillPrompt = "# Agent Skills\n\n".implode("\n\n", $systemPromptParts);
-            $options['system_prompt'] = ($options['system_prompt'] ?? '')."\n\n".$skillPrompt;
+            $skillPrompt = "# Agent Skills\n\n" . implode("\n\n", $systemPromptParts);
+            $options['system_prompt'] = ($options['system_prompt'] ?? '') . "\n\n" . $skillPrompt;
             $input->setOptions($options);
         }
     }

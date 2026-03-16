@@ -1,24 +1,23 @@
 <?php
 
-/*
- * This file is part of the Symfony package.
- *
- * (c) Fabien Potencier <fabien@symfony.com>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
- */
+declare(strict_types=1);
 
-namespace AgentSkills\Tests\Skill\Evaluation\Workspace;
+namespace AgentSkills\Tests\Evaluation\Workspace;
 
-use PHPUnit\Framework\TestCase;
 use AgentSkills\Evaluation\AssertionResult;
 use AgentSkills\Evaluation\BenchmarkResult;
 use AgentSkills\Evaluation\BenchmarkStatistic;
 use AgentSkills\Evaluation\GradingResult;
 use AgentSkills\Evaluation\TimingResult;
 use AgentSkills\Evaluation\Workspace\WorkspaceManager;
+use PHPUnit\Framework\TestCase;
 use Symfony\Component\Filesystem\Filesystem;
+
+use function bin2hex;
+use function file_get_contents;
+use function json_decode;
+use function random_bytes;
+use function sys_get_temp_dir;
 
 final class WorkspaceManagerTest extends TestCase
 {
@@ -26,7 +25,7 @@ final class WorkspaceManagerTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->tempDir = sys_get_temp_dir().'/workspace_test_'.bin2hex(random_bytes(4));
+        $this->tempDir = sys_get_temp_dir() . '/workspace_test_' . bin2hex(random_bytes(4));
     }
 
     protected function tearDown(): void
@@ -39,7 +38,7 @@ final class WorkspaceManagerTest extends TestCase
         $manager = new WorkspaceManager($this->tempDir);
         $dir = $manager->initializeIteration(1);
 
-        $this->assertSame($this->tempDir.'/iteration-1', $dir);
+        $this->assertSame($this->tempDir . '/iteration-1', $dir);
         $this->assertDirectoryExists($dir);
     }
 
@@ -48,8 +47,8 @@ final class WorkspaceManagerTest extends TestCase
         $manager = new WorkspaceManager($this->tempDir);
         $dir = $manager->getEvalDirectory(1, 'test-eval', 'with_skill');
 
-        $this->assertSame($this->tempDir.'/iteration-1/eval-test-eval/with_skill', $dir);
-        $this->assertDirectoryExists($dir.'/outputs');
+        $this->assertSame($this->tempDir . '/iteration-1/eval-test-eval/with_skill', $dir);
+        $this->assertDirectoryExists($dir . '/outputs');
     }
 
     public function testSaveTimingResult()
@@ -59,7 +58,7 @@ final class WorkspaceManagerTest extends TestCase
 
         $manager->saveTimingResult($evalDir, new TimingResult(100, 500));
 
-        $content = json_decode(file_get_contents($evalDir.'/timing.json'), true);
+        $content = json_decode(file_get_contents($evalDir . '/timing.json'), true);
         $this->assertSame(100, $content['total_tokens']);
         $this->assertSame(500, $content['duration_ms']);
     }
@@ -72,9 +71,9 @@ final class WorkspaceManagerTest extends TestCase
         $grading = new GradingResult([new AssertionResult('test', true, 'evidence')]);
         $manager->saveGradingResult($evalDir, $grading);
 
-        $content = json_decode(file_get_contents($evalDir.'/grading.json'), true);
-        $this->assertCount(1, $content['assertions']);
-        $this->assertTrue($content['assertions'][0]['passed']);
+        $content = json_decode(file_get_contents($evalDir . '/grading.json'), true);
+        $this->assertCount(1, $content['assertion_results']);
+        $this->assertTrue($content['assertion_results'][0]['passed']);
     }
 
     public function testSaveBenchmarkResult()
@@ -93,10 +92,11 @@ final class WorkspaceManagerTest extends TestCase
 
         $manager->saveBenchmarkResult(1, $benchmark);
 
-        $content = json_decode(file_get_contents($this->tempDir.'/iteration-1/benchmark.json'), true);
-        $this->assertArrayHasKey('with_skill', $content);
-        $this->assertArrayHasKey('without_skill', $content);
-        $this->assertArrayHasKey('delta', $content);
+        $content = json_decode(file_get_contents($this->tempDir . '/iteration-1/benchmark.json'), true);
+        $this->assertArrayHasKey('run_summary', $content);
+        $this->assertArrayHasKey('with_skill', $content['run_summary']);
+        $this->assertArrayHasKey('without_skill', $content['run_summary']);
+        $this->assertArrayHasKey('delta', $content['run_summary']);
     }
 
     public function testSaveOutput()
@@ -106,6 +106,6 @@ final class WorkspaceManagerTest extends TestCase
 
         $manager->saveOutput($evalDir, 'Agent output text');
 
-        $this->assertSame('Agent output text', file_get_contents($evalDir.'/outputs/output.txt'));
+        $this->assertSame('Agent output text', file_get_contents($evalDir . '/outputs/output.txt'));
     }
 }

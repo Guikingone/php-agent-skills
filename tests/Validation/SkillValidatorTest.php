@@ -1,22 +1,33 @@
 <?php
 
-/*
- * This file is part of the Symfony package.
- *
- * (c) Fabien Potencier <fabien@symfony.com>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
- */
+declare(strict_types=1);
 
-namespace AgentSkills\Tests\Skill\Validation;
+namespace AgentSkills\Tests\Validation;
 
-use PHPUnit\Framework\TestCase;
 use AgentSkills\Skill;
 use AgentSkills\SkillMetadata;
 use AgentSkills\SkillParser;
 use AgentSkills\Validation\SkillValidator;
+use PHPUnit\Framework\TestCase;
 use Symfony\Component\Filesystem\Filesystem;
+
+use function array_filter;
+use function array_map;
+use function bin2hex;
+use function explode;
+use function implode;
+use function ltrim;
+use function min;
+use function preg_match;
+use function random_bytes;
+use function str_contains;
+use function str_repeat;
+use function strlen;
+use function substr;
+use function sys_get_temp_dir;
+use function trim;
+
+use const PHP_INT_MAX;
 
 final class SkillValidatorTest extends TestCase
 {
@@ -24,7 +35,7 @@ final class SkillValidatorTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->tempDir = sys_get_temp_dir().'/skill_validator_test_'.bin2hex(random_bytes(4));
+        $this->tempDir = sys_get_temp_dir() . '/skill_validator_test_' . bin2hex(random_bytes(4));
 
         (new Filesystem())->mkdir($this->tempDir);
     }
@@ -36,9 +47,9 @@ final class SkillValidatorTest extends TestCase
 
     public function testValidateMinimalSkill()
     {
-        $this->createSkillFile("---\nname: my-skill\ndescription: A useful skill for testing purposes\n---\nDo something useful.");
+        $skillDir = $this->createSkillFile("---\nname: my-skill\ndescription: A useful skill for testing purposes\n---\nDo something useful.");
 
-        $skill = (new SkillParser())->parse($this->tempDir);
+        $skill = (new SkillParser())->parse($skillDir);
 
         $result = (new SkillValidator())->validate($skill);
 
@@ -48,9 +59,9 @@ final class SkillValidatorTest extends TestCase
 
     public function testValidateShortDescriptionWarning()
     {
-        $this->createSkillFile("---\nname: short-desc\ndescription: Short\n---\nBody content here.");
+        $skillDir = $this->createSkillFile("---\nname: short-desc\ndescription: Short\n---\nBody content here.");
 
-        $skill = (new SkillParser())->parse($this->tempDir);
+        $skill = (new SkillParser())->parse($skillDir);
 
         $result = (new SkillValidator())->validate($skill);
 
@@ -61,9 +72,9 @@ final class SkillValidatorTest extends TestCase
 
     public function testValidateUnknownFrontmatterFieldWarning()
     {
-        $this->createSkillFile("---\nname: my-skill\ndescription: A properly described skill here\nunknown-field: value\n---\nBody.");
+        $skillDir = $this->createSkillFile("---\nname: my-skill\ndescription: A properly described skill here\nunknown-field: value\n---\nBody.");
 
-        $skill = (new SkillParser())->parse($this->tempDir);
+        $skill = (new SkillParser())->parse($skillDir);
 
         $result = (new SkillValidator())->validate($skill);
 
@@ -74,9 +85,9 @@ final class SkillValidatorTest extends TestCase
 
     public function testValidateEmptyBodyWarning()
     {
-        $this->createSkillFile("---\nname: empty-body\ndescription: Skill with no body content at all\n---\n");
+        $skillDir = $this->createSkillFile("---\nname: empty-body\ndescription: Skill with no body content at all\n---\n");
 
-        $skill = (new SkillParser())->parse($this->tempDir);
+        $skill = (new SkillParser())->parse($skillDir);
 
         $result = (new SkillValidator())->validate($skill);
 
@@ -106,9 +117,9 @@ final class SkillValidatorTest extends TestCase
             Do great things.
             MD;
 
-        $this->createSkillFile($content);
+        $skillDir = $this->createSkillFile($content);
 
-        $skill = (new SkillParser())->parse($this->tempDir);
+        $skill = (new SkillParser())->parse($skillDir);
 
         $result = (new SkillValidator())->validate($skill);
 
@@ -121,9 +132,9 @@ final class SkillValidatorTest extends TestCase
 
     public function testValidateLicenseFieldIsRecognized()
     {
-        $this->createSkillFile("---\nname: license-skill\ndescription: A properly described skill for testing purposes\nlicense: MIT\n---\nBody.");
+        $skillDir = $this->createSkillFile("---\nname: license-skill\ndescription: A properly described skill for testing purposes\nlicense: MIT\n---\nBody.");
 
-        $skill = (new SkillParser())->parse($this->tempDir);
+        $skill = (new SkillParser())->parse($skillDir);
 
         $result = (new SkillValidator())->validate($skill);
 
@@ -168,6 +179,18 @@ final class SkillValidatorTest extends TestCase
         $this->assertStringContainsString('compatibility', $result->getErrors()[0]);
     }
 
+    public function testValidateEmptyCompatibility()
+    {
+        $metadata = new SkillMetadata('my-skill', 'A properly described skill for testing purposes', compatibility: '');
+        $skill = new Skill('Body content.', $metadata);
+
+        $result = (new SkillValidator())->validate($skill);
+
+        $this->assertFalse($result->isValid());
+        $this->assertStringContainsString('compatibility', $result->getErrors()[0]);
+        $this->assertStringContainsString('non-empty', $result->getErrors()[0]);
+    }
+
     public function testValidateSkillInterfaceWithShortDescription()
     {
         $metadata = new SkillMetadata('my-skill', 'Short');
@@ -192,21 +215,34 @@ final class SkillValidatorTest extends TestCase
         $this->assertStringContainsString('no body content', $result->getWarnings()[0]);
     }
 
-    private function createSkillFile(string $content): void
+    /**
+     * @return string The skill directory path
+     */
+    private function createSkillFile(string $content): string
     {
         $lines = explode("\n", $content);
-        $minIndent = \PHP_INT_MAX;
+        $minIndent = PHP_INT_MAX;
 
         foreach ($lines as $line) {
             if ('' !== trim($line)) {
-                $minIndent = min($minIndent, \strlen($line) - \strlen(ltrim($line)));
+                $minIndent = min($minIndent, strlen($line) - strlen(ltrim($line)));
             }
         }
 
-        if ($minIndent > 0 && $minIndent < \PHP_INT_MAX) {
-            $lines = array_map(static fn (string $l): string => \strlen($l) >= $minIndent ? substr($l, $minIndent) : $l, $lines);
+        if ($minIndent > 0 && $minIndent < PHP_INT_MAX) {
+            $lines = array_map(static fn (string $l): string => strlen($l) >= $minIndent ? substr($l, $minIndent) : $l, $lines);
         }
 
-        (new Filesystem())->dumpFile($this->tempDir.'/SKILL.md', implode("\n", $lines));
+        $normalized = implode("\n", $lines);
+
+        $skillDir = $this->tempDir;
+        if (1 === preg_match('/^name:\s*["\']?([a-z0-9](?:[a-z0-9-]*[a-z0-9])?)["\']?\s*$/m', $normalized, $matches)) {
+            $skillDir = $this->tempDir . '/' . $matches[1];
+        }
+
+        (new Filesystem())->mkdir($skillDir);
+        (new Filesystem())->dumpFile($skillDir . '/SKILL.md', $normalized);
+
+        return $skillDir;
     }
 }

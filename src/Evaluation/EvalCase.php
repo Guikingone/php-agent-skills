@@ -1,13 +1,6 @@
 <?php
 
-/*
- * This file is part of the Symfony package.
- *
- * (c) Fabien Potencier <fabien@symfony.com>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
- */
+declare(strict_types=1);
 
 namespace AgentSkills\Evaluation;
 
@@ -19,11 +12,11 @@ namespace AgentSkills\Evaluation;
 final class EvalCase
 {
     /**
-     * @param int      $id             Unique identifier within the eval suite
-     * @param string   $prompt         The user prompt to send to the agent
-     * @param string   $expectedOutput The expected output for comparison
-     * @param string[] $files          Optional files to provide as context
-     * @param string[] $assertions     Assertions to grade the output against
+     * @param int $id Unique identifier within the eval suite
+     * @param string $prompt The user prompt to send to the agent
+     * @param string $expectedOutput The expected output for comparison
+     * @param string[] $files Optional files to provide as context
+     * @param string[] $assertions Assertions to grade the output against
      */
     public function __construct(
         private readonly int $id,

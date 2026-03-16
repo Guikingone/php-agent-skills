@@ -1,13 +1,6 @@
 <?php
 
-/*
- * This file is part of the Symfony package.
- *
- * (c) Fabien Potencier <fabien@symfony.com>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
- */
+declare(strict_types=1);
 
 namespace AgentSkills;
 
@@ -16,6 +9,11 @@ use AgentSkills\Validation\SkillValidator;
 use AgentSkills\Validation\SkillValidatorInterface;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Finder\Finder;
+use Throwable;
+
+use function array_filter;
+use function is_dir;
+use function sprintf;
 
 /**
  * @author Guillaume Loulier <contact@guillaumeloulier.fr>
@@ -46,11 +44,11 @@ final class FilesystemSkillLoader implements SkillLoaderInterface
                 $validation = $this->skillValidator->validate($skill);
 
                 if (!$validation->isValid()) {
-                    throw new InvalidArgumentException(\sprintf('The "%s" is not a valid skill.', $skill->getName()));
+                    throw new InvalidArgumentException(sprintf('The "%s" is not a valid skill.', $skill->getName()));
                 }
 
                 return $skill;
-            } catch (\Throwable) {
+            } catch (Throwable) {
                 continue;
             }
         }
@@ -69,11 +67,11 @@ final class FilesystemSkillLoader implements SkillLoaderInterface
                 $validation = $this->skillValidator->validate($skill);
 
                 if (!$validation->isValid()) {
-                    throw new InvalidArgumentException(\sprintf('The "%s" is not a valid skill.', $skill->getName()));
+                    throw new InvalidArgumentException(sprintf('The "%s" is not a valid skill.', $skill->getName()));
                 }
 
                 $skills[$skill->getName()] = $skill;
-            } catch (\Throwable) {
+            } catch (Throwable) {
                 continue;
             }
         }
@@ -90,7 +88,7 @@ final class FilesystemSkillLoader implements SkillLoaderInterface
                 $metadata = $this->parser->parseMetadataOnly($skillDir);
 
                 $skills[$metadata->getName()] = $metadata;
-            } catch (\Throwable) {
+            } catch (Throwable) {
                 continue;
             }
         }

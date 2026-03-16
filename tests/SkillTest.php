@@ -1,20 +1,17 @@
 <?php
 
-/*
- * This file is part of the Symfony package.
- *
- * (c) Fabien Potencier <fabien@symfony.com>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
- */
+declare(strict_types=1);
 
-namespace AgentSkills\Tests\Skill;
+namespace AgentSkills\Tests;
 
-use PHPUnit\Framework\TestCase;
 use AgentSkills\Skill;
 use AgentSkills\SkillMetadata;
+use PHPUnit\Framework\TestCase;
 use Symfony\Component\Filesystem\Filesystem;
+
+use function bin2hex;
+use function random_bytes;
+use function sys_get_temp_dir;
 
 final class SkillTest extends TestCase
 {
@@ -22,7 +19,7 @@ final class SkillTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->tempDir = sys_get_temp_dir().'/skill_test_'.bin2hex(random_bytes(4));
+        $this->tempDir = sys_get_temp_dir() . '/skill_test_' . bin2hex(random_bytes(4));
 
         (new Filesystem())->mkdir($this->tempDir);
     }
@@ -65,7 +62,7 @@ final class SkillTest extends TestCase
 
     public function testLoadScriptReturnsPath()
     {
-        $scriptPath = $this->tempDir.'/scripts/setup.sh';
+        $scriptPath = $this->tempDir . '/scripts/setup.sh';
 
         $metadata = new SkillMetadata('my-skill', 'A skill');
         $skill = new Skill('body', $metadata, scriptsLoader: static fn (string $script): string => $scriptPath);
@@ -83,7 +80,7 @@ final class SkillTest extends TestCase
 
     public function testLoadAssetReturnsPath()
     {
-        $assetPath = $this->tempDir.'/assets/logo.png';
+        $assetPath = $this->tempDir . '/assets/logo.png';
 
         $metadata = new SkillMetadata('my-skill', 'A skill');
         $skill = new Skill('body', $metadata, assetsLoader: static fn (string $asset): string => $assetPath);

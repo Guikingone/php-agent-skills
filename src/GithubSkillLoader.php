@@ -1,21 +1,23 @@
 <?php
 
-/*
- * This file is part of the Symfony package.
- *
- * (c) Fabien Potencier <fabien@symfony.com>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
- */
+declare(strict_types=1);
 
 namespace AgentSkills;
 
 use AgentSkills\Exception\InvalidArgumentException;
 use AgentSkills\Validation\SkillValidator;
 use AgentSkills\Validation\SkillValidatorInterface;
+use Closure;
 use Symfony\Component\String\UnicodeString;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
+use Throwable;
+
+use function array_filter;
+use function array_merge;
+use function explode;
+use function implode;
+use function is_string;
+use function sprintf;
 
 /**
  * Loads Agent Skills from GitHub repositories using the GitHub Contents API.
@@ -55,14 +57,14 @@ final class GithubSkillLoader implements SkillLoaderInterface
 
             try {
                 $content = $this->fetchRawFile($config, $this->buildSkillPath($config['path'], $name, 'SKILL.md'));
-            } catch (\Throwable) {
+            } catch (Throwable) {
                 continue;
             }
 
             try {
                 $skill = $this->parser->parseFromContent(
                     $content,
-                    \sprintf('github://%s/%s', $config['repository'], $name),
+                    sprintf('github://%s/%s', $config['repository'], $name),
                     $this->createScriptsLoader($config, $name),
                     $this->createReferencesLoader($config, $name),
                     $this->createAssetsLoader($config, $name),
@@ -75,11 +77,11 @@ final class GithubSkillLoader implements SkillLoaderInterface
                 $validation = $this->skillValidator->validate($skill);
 
                 if (!$validation->isValid()) {
-                    throw new InvalidArgumentException(\sprintf('The "%s" is not a valid skill.', $skill->getName()));
+                    throw new InvalidArgumentException(sprintf('The "%s" is not a valid skill.', $skill->getName()));
                 }
 
                 return $skill;
-            } catch (\Throwable) {
+            } catch (Throwable) {
                 continue;
             }
         }
@@ -96,7 +98,7 @@ final class GithubSkillLoader implements SkillLoaderInterface
 
             try {
                 $directories = $this->listSkillDirectories($config);
-            } catch (\Throwable) {
+            } catch (Throwable) {
                 continue;
             }
 
@@ -106,7 +108,7 @@ final class GithubSkillLoader implements SkillLoaderInterface
 
                     $skill = $this->parser->parseFromContent(
                         $content,
-                        \sprintf('github://%s/%s', $config['repository'], $skillName),
+                        sprintf('github://%s/%s', $config['repository'], $skillName),
                         $this->createScriptsLoader($config, $skillName),
                         $this->createReferencesLoader($config, $skillName),
                         $this->createAssetsLoader($config, $skillName),
@@ -119,7 +121,7 @@ final class GithubSkillLoader implements SkillLoaderInterface
                     }
 
                     $skills[$skill->getName()] = $skill;
-                } catch (\Throwable) {
+                } catch (Throwable) {
                     continue;
                 }
             }
@@ -137,7 +139,7 @@ final class GithubSkillLoader implements SkillLoaderInterface
 
             try {
                 $directories = $this->listSkillDirectories($config);
-            } catch (\Throwable) {
+            } catch (Throwable) {
                 continue;
             }
 
@@ -146,11 +148,11 @@ final class GithubSkillLoader implements SkillLoaderInterface
                     $content = $this->fetchRawFile($config, $this->buildSkillPath($config['path'], $skillName, 'SKILL.md'));
                     $skillMetadata = $this->parser->parseMetadataFromContent(
                         $content,
-                        \sprintf('github://%s/%s', $config['repository'], $skillName),
+                        sprintf('github://%s/%s', $config['repository'], $skillName),
                     );
 
                     $metadata[$skillMetadata->getName()] = $skillMetadata;
-                } catch (\Throwable) {
+                } catch (Throwable) {
                     continue;
                 }
             }
@@ -169,9 +171,9 @@ final class GithubSkillLoader implements SkillLoaderInterface
     private function listSkillDirectories(array $config): array
     {
         [$owner, $repo] = explode('/', $config['repository'], 2);
-        $apiPath = '' !== $config['path'] ? '/'.$config['path'] : '';
+        $apiPath = '' !== $config['path'] ? '/' . $config['path'] : '';
 
-        $url = \sprintf('%s/repos/%s/%s/contents%s', self::GITHUB_API_BASE, $owner, $repo, $apiPath);
+        $url = sprintf('%s/repos/%s/%s/contents%s', self::GITHUB_API_BASE, $owner, $repo, $apiPath);
 
         $response = $this->httpClient->request('GET', $url, [
             'headers' => $this->buildHeaders($config['token']),
@@ -186,7 +188,7 @@ final class GithubSkillLoader implements SkillLoaderInterface
         $directories = [];
 
         foreach ($entries as $entry) {
-            if ('dir' === ($entry['type'] ?? null) && \is_string($entry['name'] ?? null)) {
+            if ('dir' === ($entry['type'] ?? null) && is_string($entry['name'] ?? null)) {
                 $directories[] = $entry['name'];
             }
         }
@@ -207,12 +209,12 @@ final class GithubSkillLoader implements SkillLoaderInterface
 
         [$owner, $repo] = explode('/', $config['repository'], 2);
 
-        $url = \sprintf('%s/%s/%s/%s/%s', self::GITHUB_RAW_BASE, $owner, $repo, $config['branch'], $filePath);
+        $url = sprintf('%s/%s/%s/%s/%s', self::GITHUB_RAW_BASE, $owner, $repo, $config['branch'], $filePath);
 
         $response = $this->httpClient->request('GET', $url);
 
         if (200 !== $response->getStatusCode()) {
-            throw new InvalidArgumentException(\sprintf('Unable to fetch "%s" from GitHub (HTTP %d).', $filePath, $response->getStatusCode()));
+            throw new InvalidArgumentException(sprintf('Unable to fetch "%s" from GitHub (HTTP %d).', $filePath, $response->getStatusCode()));
         }
 
         return $response->getContent();
@@ -227,7 +229,7 @@ final class GithubSkillLoader implements SkillLoaderInterface
     {
         [$owner, $repo] = explode('/', $config['repository'], 2);
 
-        $url = \sprintf('%s/repos/%s/%s/contents/%s', self::GITHUB_API_BASE, $owner, $repo, $filePath);
+        $url = sprintf('%s/repos/%s/%s/contents/%s', self::GITHUB_API_BASE, $owner, $repo, $filePath);
 
         $response = $this->httpClient->request('GET', $url, [
             'headers' => array_merge($this->buildHeaders($config['token']), [
@@ -239,7 +241,7 @@ final class GithubSkillLoader implements SkillLoaderInterface
         ]);
 
         if (200 !== $response->getStatusCode()) {
-            throw new InvalidArgumentException(\sprintf('Unable to fetch "%s" from GitHub API (HTTP %d).', $filePath, $response->getStatusCode()));
+            throw new InvalidArgumentException(sprintf('Unable to fetch "%s" from GitHub API (HTTP %d).', $filePath, $response->getStatusCode()));
         }
 
         return $response->getContent();
@@ -248,20 +250,20 @@ final class GithubSkillLoader implements SkillLoaderInterface
     /**
      * @param array{repository: string, path: string, branch: string, token: string|null} $config
      */
-    private function createScriptsLoader(array $config, string $skillName): \Closure
+    private function createScriptsLoader(array $config, string $skillName): Closure
     {
-        return fn (string $script): string => $this->fetchRawFile($config, $this->buildSkillPath($config['path'], $skillName, 'scripts/'.$script));
+        return fn (string $script): string => $this->fetchRawFile($config, $this->buildSkillPath($config['path'], $skillName, 'scripts/' . $script));
     }
 
     /**
      * @param array{repository: string, path: string, branch: string, token: string|null} $config
      */
-    private function createReferencesLoader(array $config, string $skillName): \Closure
+    private function createReferencesLoader(array $config, string $skillName): Closure
     {
         return function (string $reference) use ($config, $skillName): ?string {
             try {
-                return $this->fetchRawFile($config, $this->buildSkillPath($config['path'], $skillName, 'references/'.$reference));
-            } catch (\Throwable) {
+                return $this->fetchRawFile($config, $this->buildSkillPath($config['path'], $skillName, 'references/' . $reference));
+            } catch (Throwable) {
                 return null;
             }
         };
@@ -270,12 +272,12 @@ final class GithubSkillLoader implements SkillLoaderInterface
     /**
      * @param array{repository: string, path: string, branch: string, token: string|null} $config
      */
-    private function createAssetsLoader(array $config, string $skillName): \Closure
+    private function createAssetsLoader(array $config, string $skillName): Closure
     {
         return function (string $asset) use ($config, $skillName): ?string {
             try {
-                return $this->fetchRawFile($config, $this->buildSkillPath($config['path'], $skillName, 'assets/'.$asset));
-            } catch (\Throwable) {
+                return $this->fetchRawFile($config, $this->buildSkillPath($config['path'], $skillName, 'assets/' . $asset));
+            } catch (Throwable) {
                 return null;
             }
         };
@@ -299,7 +301,7 @@ final class GithubSkillLoader implements SkillLoaderInterface
         ];
 
         if (null !== $token) {
-            $headers['Authorization'] = 'Bearer '.$token;
+            $headers['Authorization'] = 'Bearer ' . $token;
         }
 
         return $headers;
@@ -324,11 +326,11 @@ final class GithubSkillLoader implements SkillLoaderInterface
         }
 
         if (!$repo->containsAny('/')) {
-            throw new InvalidArgumentException(\sprintf('Invalid GitHub repository format "%s". Expected "owner/repo".', $repo));
+            throw new InvalidArgumentException(sprintf('Invalid GitHub repository format "%s". Expected "owner/repo".', $repo));
         }
 
         return [
-            'repository' => $repo,
+            'repository' => $repo->toString(),
             'path' => $repository['path'] ?? '',
             'branch' => $repository['branch'] ?? 'main',
             'token' => $repository['token'] ?? null,

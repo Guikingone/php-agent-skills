@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace AgentSkills;
 
-use Symfony\AI\Agent\Exception\InvalidArgumentException;
+use AgentSkills\Exception\InvalidArgumentException;
+use Closure;
 
 /**
  * @author Guillaume Loulier <contact@guillaumeloulier.fr>
@@ -33,27 +34,27 @@ interface SkillParserInterface
      * This enables source-agnostic parsing (e.g. from GitHub, database, etc.)
      * where the caller provides the content and closures for loading sub-resources.
      *
-     * @param string        $content          Raw SKILL.md content (frontmatter + body)
-     * @param string        $source           Source identifier for error messages
-     * @param \Closure|null $scriptsLoader    fn(string $script): string
-     * @param \Closure|null $referencesLoader fn(string $reference): ?string
-     * @param \Closure|null $assetsLoader     fn(string $asset): ?string
+     * @param string $content Raw SKILL.md content (frontmatter + body)
+     * @param string $source Source identifier for error messages
+     * @param Closure|null $scriptsLoader fn(string $script): string
+     * @param Closure|null $referencesLoader fn(string $reference): ?string
+     * @param Closure|null $assetsLoader fn(string $asset): ?string
      *
      * @throws InvalidArgumentException If content is malformed
      */
     public function parseFromContent(
         string $content,
         string $source,
-        ?\Closure $scriptsLoader = null,
-        ?\Closure $referencesLoader = null,
-        ?\Closure $assetsLoader = null,
+        ?Closure $scriptsLoader = null,
+        ?Closure $referencesLoader = null,
+        ?Closure $assetsLoader = null,
     ): SkillInterface;
 
     /**
      * Parses only the frontmatter metadata from raw SKILL.md content.
      *
      * @param string $content Raw SKILL.md content (frontmatter + body)
-     * @param string $source  Source identifier for error messages
+     * @param string $source Source identifier for error messages
      *
      * @throws InvalidArgumentException If content is malformed
      */

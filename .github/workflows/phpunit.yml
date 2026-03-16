@@ -16,21 +16,8 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        php-versions: ['8.2', '8.3', '8.4', '8.5']
+        php-versions: ['8.3', '8.4', '8.5']
         composer-dependencies: ['highest', 'lowest']
-    services:
-      redis:
-        image: redis:6.0.0
-        ports:
-          - 6379:6379
-      postgres:
-        image: postgres:9.4
-        env:
-          POSTGRES_DB: _symfony_scheduler_tasks
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-        ports:
-          - 5432:5432
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -39,7 +26,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php-versions }}
-          extensions: zip, redis, pcntl, pgsql
+          extensions: zip
         env:
           update: true
 
@@ -58,10 +45,7 @@ jobs:
           composer-options: '--prefer-stable --ignore-platform-reqs'
 
       - name: Run PHPUnit
-        run: php vendor/bin/phpunit tests -v
-        env:
-          SCHEDULER_REDIS_DSN: 'redis://127.0.0.1:6379/_symfony_scheduler_tasks?auth=password'
-          SCHEDULER_POSTGRES_DSN: 'postgres://postgres:postgres@127.0.0.1:5432/_symfony_scheduler_tasks'
+        run: php vendor/bin/phpunit tests
 
       - name: Cache PHPUnit result
         uses: actions/cache@v3

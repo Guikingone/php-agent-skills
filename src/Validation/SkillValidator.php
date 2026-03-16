@@ -1,18 +1,20 @@
 <?php
 
-/*
- * This file is part of the Symfony package.
- *
- * (c) Fabien Potencier <fabien@symfony.com>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
- */
+declare(strict_types=1);
 
 namespace AgentSkills\Validation;
 
 use AgentSkills\SkillInterface;
 use Symfony\Component\String\UnicodeString;
+
+use function array_filter;
+use function array_keys;
+use function array_values;
+use function implode;
+use function in_array;
+use function is_string;
+use function sprintf;
+use function trim;
 
 /**
  * @author Guillaume Loulier <contact@guillaumeloulier.fr>
@@ -35,7 +37,7 @@ final class SkillValidator implements SkillValidatorInterface
         if ($unicodeName->isEmpty()) {
             $errors[] = 'Field "name" must not be empty.';
         } elseif (!$unicodeName->match('/^[a-z0-9]+(-[a-z0-9]+)*$/')) {
-            $errors[] = \sprintf('Field "name" must be kebab-case (e.g. "my-skill"), got "%s".', $name);
+            $errors[] = sprintf('Field "name" must be kebab-case (e.g. "my-skill"), got "%s".', $name);
         } elseif ($unicodeName->length() > 64) {
             $errors[] = 'Field "name" is too long. Use a shorter name.';
         }
@@ -47,7 +49,7 @@ final class SkillValidator implements SkillValidatorInterface
         if ($unicodeDesc->trim()->isEmpty()) {
             $errors[] = 'Field "description" must not be empty.';
         } elseif ($unicodeDesc->length() < 20) {
-            $warnings[] = \sprintf('Field "description" is short (%d chars). Consider a more descriptive text (recommended: 20+ chars).', $unicodeDesc->length());
+            $warnings[] = sprintf('Field "description" is short (%d chars). Consider a more descriptive text (recommended: 20+ chars).', $unicodeDesc->length());
         } elseif ($unicodeDesc->length() > 1024) {
             $errors[] = 'Field "description" is too long. Consider using a shorter description.';
         }
@@ -62,27 +64,32 @@ final class SkillValidator implements SkillValidatorInterface
         $allowedTools = $metadata->getAllowedTools();
         $nonStringTools = array_filter(
             $allowedTools,
-            static fn (mixed $tool): bool => !\is_string($tool),
+            static fn (mixed $tool): bool => !is_string($tool),
         );
 
         if ([] !== $allowedTools && [] !== $nonStringTools) {
-            $errors[] = \sprintf('Field "allowed-fields" must contains strings, the following tools are not valid: "%s".', implode(', ', $allowedTools));
+            $errors[] = sprintf('Field "allowed-fields" must contains strings, the following tools are not valid: "%s".', implode(', ', $allowedTools));
         }
 
         // 5. Validate optional compatibility field
         $compatibility = $metadata->getCompatibility();
-        if (null !== $compatibility && (new UnicodeString($compatibility))->length() > 500) {
-            $errors[] = 'Field "compatibility" is too long. Maximum is 500 characters.';
+        if (null !== $compatibility) {
+            $unicodeCompat = new UnicodeString($compatibility);
+            if ($unicodeCompat->trim()->isEmpty()) {
+                $errors[] = 'Field "compatibility" must be a non-empty string if provided.';
+            } elseif ($unicodeCompat->length() > 500) {
+                $errors[] = 'Field "compatibility" is too long. Maximum is 500 characters.';
+            }
         }
 
         $metadataFields = $metadata->getMetadata();
         $nonStringFields = array_filter(
             array_values($metadataFields),
-            static fn (mixed $value): bool => !\is_string($value),
+            static fn (mixed $value): bool => !is_string($value),
         );
 
         if ([] !== $metadataFields && [] !== $nonStringFields) {
-            $errors[] = \sprintf('Field "metadata" must contains strings either as keys and values, the following values are not valid: "%s".', implode(', ', $nonStringFields));
+            $errors[] = sprintf('Field "metadata" must contains strings either as keys and values, the following values are not valid: "%s".', implode(', ', $nonStringFields));
         }
 
         // 7. Check body content
@@ -92,8 +99,8 @@ final class SkillValidator implements SkillValidatorInterface
         }
 
         foreach (array_keys($metadata->getFrontmatter()) as $fields) {
-            if (!\in_array($fields, self::ALLOWED_FIELDS, true)) {
-                $warnings[] = \sprintf('Unknown frontmatter field "%s".', $fields);
+            if (!in_array($fields, self::ALLOWED_FIELDS, true)) {
+                $warnings[] = sprintf('Unknown frontmatter field "%s".', $fields);
             }
         }
 

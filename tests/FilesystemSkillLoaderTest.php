@@ -1,21 +1,19 @@
 <?php
 
-/*
- * This file is part of the Symfony package.
- *
- * (c) Fabien Potencier <fabien@symfony.com>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
- */
+declare(strict_types=1);
 
-namespace AgentSkills\Tests\Skill;
+namespace AgentSkills\Tests;
 
-use PHPUnit\Framework\TestCase;
 use AgentSkills\FilesystemSkillLoader;
 use AgentSkills\Skill;
 use AgentSkills\SkillMetadata;
+use PHPUnit\Framework\TestCase;
 use Symfony\Component\Filesystem\Filesystem;
+
+use function bin2hex;
+use function random_bytes;
+use function sprintf;
+use function sys_get_temp_dir;
 
 final class FilesystemSkillLoaderTest extends TestCase
 {
@@ -26,7 +24,7 @@ final class FilesystemSkillLoaderTest extends TestCase
     protected function setUp(): void
     {
         $this->filesystem = new Filesystem();
-        $this->tempDir = sys_get_temp_dir().'/skill_discovery_test_'.bin2hex(random_bytes(4));
+        $this->tempDir = sys_get_temp_dir() . '/skill_discovery_test_' . bin2hex(random_bytes(4));
         $this->filesystem->mkdir($this->tempDir);
     }
 
@@ -51,8 +49,8 @@ final class FilesystemSkillLoaderTest extends TestCase
 
     public function testDiscoverMetadataReturnsEmptyWhenNoSkillsFound()
     {
-        $this->filesystem->mkdir($this->tempDir.'/not-a-skill');
-        $this->filesystem->dumpFile($this->tempDir.'/not-a-skill/README.md', 'Not a skill');
+        $this->filesystem->mkdir($this->tempDir . '/not-a-skill');
+        $this->filesystem->dumpFile($this->tempDir . '/not-a-skill/README.md', 'Not a skill');
 
         $discovery = new FilesystemSkillLoader([$this->tempDir]);
 
@@ -79,8 +77,8 @@ final class FilesystemSkillLoaderTest extends TestCase
         $this->createSkillDirectory('valid-skill', 'A valid skill');
 
         // Create an invalid skill (missing description)
-        $this->filesystem->mkdir($this->tempDir.'/invalid-skill');
-        $this->filesystem->dumpFile($this->tempDir.'/invalid-skill/SKILL.md', "---\nname: invalid-skill\n---\nBody.");
+        $this->filesystem->mkdir($this->tempDir . '/invalid-skill');
+        $this->filesystem->dumpFile($this->tempDir . '/invalid-skill/SKILL.md', "---\nname: invalid-skill\n---\nBody.");
 
         $discovery = new FilesystemSkillLoader([$this->tempDir]);
         $metadata = $discovery->discoverMetadata();
@@ -91,8 +89,8 @@ final class FilesystemSkillLoaderTest extends TestCase
 
     public function testDiscoverMetadataFromMultipleDirectories()
     {
-        $dir1 = $this->tempDir.'/dir1';
-        $dir2 = $this->tempDir.'/dir2';
+        $dir1 = $this->tempDir . '/dir1';
+        $dir2 = $this->tempDir . '/dir2';
         $this->filesystem->mkdir([$dir1, $dir2]);
 
         $this->createSkillDirectoryIn($dir1, 'skill-a', 'Skill A');
@@ -161,7 +159,7 @@ final class FilesystemSkillLoaderTest extends TestCase
         $this->createSkillDirectory('good-skill', 'A good skill');
 
         // Invalid: file instead of directory
-        $this->filesystem->dumpFile($this->tempDir.'/file-not-dir/SKILL.md', 'invalid');
+        $this->filesystem->dumpFile($this->tempDir . '/file-not-dir/SKILL.md', 'invalid');
 
         $discovery = new FilesystemSkillLoader([$this->tempDir]);
         $skills = $discovery->loadSkills();
@@ -173,7 +171,7 @@ final class FilesystemSkillLoaderTest extends TestCase
     public function testSkipsFilesInBaseDirectory()
     {
         // A file directly in the base dir should be ignored
-        $this->filesystem->dumpFile($this->tempDir.'/stray-file.txt', 'not a skill');
+        $this->filesystem->dumpFile($this->tempDir . '/stray-file.txt', 'not a skill');
         $this->createSkillDirectory('real-skill', 'A real skill');
 
         $discovery = new FilesystemSkillLoader([$this->tempDir]);
@@ -190,12 +188,12 @@ final class FilesystemSkillLoaderTest extends TestCase
 
     private function createSkillDirectoryIn(string $baseDir, string $name, string $description): void
     {
-        $skillDir = $baseDir.'/'.$name;
+        $skillDir = $baseDir . '/' . $name;
 
         $this->filesystem->mkdir($skillDir);
         $this->filesystem->dumpFile(
-            $skillDir.'/SKILL.md',
-            \sprintf("---\nname: %s\ndescription: %s\n---\nInstructions for %s.", $name, $description, $name),
+            $skillDir . '/SKILL.md',
+            sprintf("---\nname: %s\ndescription: %s\n---\nInstructions for %s.", $name, $description, $name),
         );
     }
 }

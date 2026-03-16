@@ -1,13 +1,6 @@
 <?php
 
-/*
- * This file is part of the Symfony package.
- *
- * (c) Fabien Potencier <fabien@symfony.com>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
- */
+declare(strict_types=1);
 
 namespace AgentSkills\Evaluation\Aggregator;
 
@@ -15,6 +8,11 @@ use AgentSkills\Evaluation\BenchmarkResult;
 use AgentSkills\Evaluation\BenchmarkStatistic;
 use AgentSkills\Evaluation\EvalRunResult;
 use AgentSkills\Evaluation\GradingResultInterface;
+
+use function array_map;
+use function array_sum;
+use function count;
+use function sqrt;
 
 /**
  * Computes aggregate statistics from evaluation run results.
@@ -44,7 +42,7 @@ final class BenchmarkAggregator implements BenchmarkAggregatorInterface
             return new BenchmarkStatistic(0.0, 0.0);
         }
 
-        $count = \count($values);
+        $count = count($values);
         $mean = array_sum($values) / $count;
 
         if (1 === $count) {

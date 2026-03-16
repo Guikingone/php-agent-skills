@@ -1,20 +1,18 @@
 <?php
 
-/*
- * This file is part of the Symfony package.
- *
- * (c) Fabien Potencier <fabien@symfony.com>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
- */
+declare(strict_types=1);
 
-namespace AgentSkills\Tests\Skill\Evaluation;
+namespace AgentSkills\Tests\Evaluation;
 
-use PHPUnit\Framework\TestCase;
-use Symfony\AI\Agent\Exception\InvalidArgumentException;
 use AgentSkills\Evaluation\EvalSuiteLoader;
+use AgentSkills\Exception\InvalidArgumentException;
+use PHPUnit\Framework\TestCase;
 use Symfony\Component\Filesystem\Filesystem;
+
+use function bin2hex;
+use function json_encode;
+use function random_bytes;
+use function sys_get_temp_dir;
 
 final class EvalSuiteLoaderTest extends TestCase
 {
@@ -22,9 +20,9 @@ final class EvalSuiteLoaderTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->tempDir = sys_get_temp_dir().'/eval_suite_loader_test_'.bin2hex(random_bytes(4));
+        $this->tempDir = sys_get_temp_dir() . '/eval_suite_loader_test_' . bin2hex(random_bytes(4));
 
-        (new Filesystem())->mkdir($this->tempDir.'/evals');
+        (new Filesystem())->mkdir($this->tempDir . '/evals');
     }
 
     protected function tearDown(): void
@@ -42,7 +40,7 @@ final class EvalSuiteLoaderTest extends TestCase
             ],
         ];
 
-        (new Filesystem())->dumpFile($this->tempDir.'/evals/evals.json', json_encode($data));
+        (new Filesystem())->dumpFile($this->tempDir . '/evals/evals.json', json_encode($data));
 
         $suite = (new EvalSuiteLoader())->load($this->tempDir);
 
@@ -65,12 +63,12 @@ final class EvalSuiteLoaderTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Eval file not found');
 
-        (new EvalSuiteLoader())->load($this->tempDir.'/nonexistent');
+        (new EvalSuiteLoader())->load($this->tempDir . '/nonexistent');
     }
 
     public function testLoadThrowsOnMalformedJson()
     {
-        (new Filesystem())->dumpFile($this->tempDir.'/evals/evals.json', '{invalid json');
+        (new Filesystem())->dumpFile($this->tempDir . '/evals/evals.json', '{invalid json');
 
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Unable to parse JSON');
@@ -82,7 +80,7 @@ final class EvalSuiteLoaderTest extends TestCase
     {
         $data = ['evals' => [['id' => 1, 'prompt' => 'test', 'expected_output' => 'out']]];
 
-        (new Filesystem())->dumpFile($this->tempDir.'/evals/evals.json', json_encode($data));
+        (new Filesystem())->dumpFile($this->tempDir . '/evals/evals.json', json_encode($data));
 
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Missing or invalid "skill_name"');
@@ -94,7 +92,7 @@ final class EvalSuiteLoaderTest extends TestCase
     {
         $data = ['skill_name' => 'test-skill'];
 
-        (new Filesystem())->dumpFile($this->tempDir.'/evals/evals.json', json_encode($data));
+        (new Filesystem())->dumpFile($this->tempDir . '/evals/evals.json', json_encode($data));
 
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Missing or invalid "evals"');
@@ -109,7 +107,7 @@ final class EvalSuiteLoaderTest extends TestCase
             'evals' => [['id' => 1, 'prompt' => 'test']],
         ];
 
-        (new Filesystem())->dumpFile($this->tempDir.'/evals/evals.json', json_encode($data));
+        (new Filesystem())->dumpFile($this->tempDir . '/evals/evals.json', json_encode($data));
 
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Missing or invalid "expected_output"');
