@@ -1,0 +1,114 @@
+{% extends '@WebProfiler/Profiler/layout.html.twig' %}
+
+{% block toolbar %}
+    {% set icon %}
+        {{ include('@WebProfiler/Icon/event.svg') }}
+        <span class="sf-toolbar-value">{{ collector.totalSkills }}</span>
+    {% endset %}
+
+    {% set text %}
+        <div class="sf-toolbar-info-piece">
+            <b>Skills loaded</b>
+            <span class="sf-toolbar-status">{{ collector.totalSkills }}</span>
+        </div>
+        <div class="sf-toolbar-info-piece">
+            <b>Loader calls</b>
+            <span class="sf-toolbar-status">{{ collector.totalCalls }}</span>
+        </div>
+    {% endset %}
+
+    {{ include('@WebProfiler/Profiler/toolbar_item.html.twig', { link: profiler_url }) }}
+{% endblock %}
+
+{% block menu %}
+    <span class="label">
+        <span class="icon">{{ include('@WebProfiler/Icon/event.svg') }}</span>
+        <strong>Agent Skills</strong>
+        {% if collector.totalSkills > 0 %}
+            <span class="count">
+                <span>{{ collector.totalSkills }}</span>
+            </span>
+        {% endif %}
+    </span>
+{% endblock %}
+
+{% block panel %}
+    <h2>Agent Skills</h2>
+
+    {% if collector.totalSkills == 0 and collector.totalCalls == 0 %}
+        <div class="empty">
+            <p>No skills were loaded during this request.</p>
+        </div>
+    {% else %}
+        <div class="metrics">
+            <div class="metric">
+                <span class="value">{{ collector.totalSkills }}</span>
+                <span class="label">Skills loaded</span>
+            </div>
+            <div class="metric">
+                <span class="value">{{ collector.totalCalls }}</span>
+                <span class="label">Loader calls</span>
+            </div>
+        </div>
+
+        {% if collector.skills is not empty %}
+            <h3>Loaded Skills</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for skill in collector.skills %}
+                        <tr>
+                            <td>{{ skill.name }}</td>
+                            <td>{{ skill.description }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% endif %}
+
+        {% if collector.calls is not empty %}
+            <h3>Loader Calls</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Method</th>
+                        <th>Details</th>
+                        <th>Called at</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for i, call in collector.calls %}
+                        <tr>
+                            <td>{{ i + 1 }}</td>
+                            <td><code>{{ call.method }}</code></td>
+                            <td>
+                                {% if call.method == 'loadSkill' %}
+                                    {% if call.skill is defined and call.skill is not null %}
+                                        {{ call.skill.name }}
+                                    {% else %}
+                                        <em>not found</em>
+                                    {% endif %}
+                                {% elseif call.method == 'loadSkills' %}
+                                    {% if call.skills is defined %}
+                                        {{ call.skills|length }} skill(s)
+                                    {% endif %}
+                                {% elseif call.method == 'discoverMetadata' %}
+                                    {% if call.metadata_count is defined %}
+                                        {{ call.metadata_count }} metadata entries
+                                    {% endif %}
+                                {% endif %}
+                            </td>
+                            <td>{{ call.called_at|date('H:i:s.u') }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% endif %}
+    {% endif %}
+{% endblock %}

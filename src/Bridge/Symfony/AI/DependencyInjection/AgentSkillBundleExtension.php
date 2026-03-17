@@ -8,6 +8,7 @@ use AgentSkills\Bridge\Symfony\AI\Command\EvalSkillCommand;
 use AgentSkills\Bridge\Symfony\AI\Command\ValidateSkillCommand;
 use AgentSkills\Bridge\Symfony\AI\Evaluation\SymfonyLlmClient;
 use AgentSkills\Bridge\Symfony\AI\Profiler\AgentSkillsDataCollector;
+use AgentSkills\Bridge\Symfony\AI\Profiler\TraceableSkillLoader;
 use AgentSkills\Bridge\Symfony\AI\SkillInputProcessor;
 use AgentSkills\Bridge\Symfony\AI\SkillTool;
 use AgentSkills\ChainSkillLoader;
@@ -83,10 +84,18 @@ final class AgentSkillBundleExtension extends Extension
 
         foreach ($agents as $agentName => $agentConfig) {
             $effectiveLoaderId = $this->registerAgentLoaders($container, $agentName, $agentConfig);
-            $allEffectiveLoaderRefs[] = new Reference($effectiveLoaderId);
 
-            $this->registerAgentInputProcessor($container, $agentName, $agentConfig, $effectiveLoaderId);
-            $this->registerAgentTools($container, $agentName, $agentConfig, $effectiveLoaderId);
+            $traceableLoaderId = sprintf('agent_skills.%s.traceable_loader', $agentName);
+            $container->setDefinition($traceableLoaderId, (new Definition(TraceableSkillLoader::class))
+                ->setArguments([
+                    new Reference($effectiveLoaderId),
+                ])
+                ->addTag('agent_skills.traceable_skill_loader'));
+
+            $allEffectiveLoaderRefs[] = new Reference($traceableLoaderId);
+
+            $this->registerAgentInputProcessor($container, $agentName, $agentConfig, $traceableLoaderId);
+            $this->registerAgentTools($container, $agentName, $agentConfig, $traceableLoaderId);
         }
 
         if (1 === count($allEffectiveLoaderRefs)) {
@@ -278,7 +287,6 @@ final class AgentSkillBundleExtension extends Extension
             ])
             ->addTag('container.preload', [
                 'class' => AgentSkillsDataCollector::class,
-            ])
-        ;
+            ]);
     }
 }

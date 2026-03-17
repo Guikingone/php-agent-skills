@@ -7,6 +7,8 @@ namespace AgentSkills\Tests\Bridge\Symfony\AI;
 use AgentSkills\Bridge\Symfony\AI\Command\EvalSkillCommand;
 use AgentSkills\Bridge\Symfony\AI\Command\ValidateSkillCommand;
 use AgentSkills\Bridge\Symfony\AI\DependencyInjection\AgentSkillBundleExtension;
+use AgentSkills\Bridge\Symfony\AI\Profiler\AgentSkillsDataCollector;
+use AgentSkills\Bridge\Symfony\AI\Profiler\TraceableSkillLoader;
 use AgentSkills\Bridge\Symfony\AI\SkillInputProcessor;
 use AgentSkills\Bridge\Symfony\AI\SkillTool;
 use AgentSkills\ChainSkillLoader;
@@ -91,8 +93,8 @@ final class AgentSkillBundleExtensionTest extends TestCase
         $this->assertSame(GithubSkillLoader::class, $container->getDefinition('agent_skills.foo.github_loader')->getClass());
         $this->assertSame(ChainSkillLoader::class, $container->getDefinition('agent_skills.foo.chain_loader')->getClass());
 
-        // The alias should point to the chain loader when github repos are configured
-        $this->assertSame('agent_skills.foo.chain_loader', (string) $container->getAlias(SkillLoaderInterface::class));
+        // The alias should point to the traceable loader wrapping the chain loader
+        $this->assertSame('agent_skills.foo.traceable_loader', (string) $container->getAlias(SkillLoaderInterface::class));
     }
 
     public function testLoadRegistersSkillToolsWhenActiveSkillsConfigured(): void
@@ -358,5 +360,85 @@ final class AgentSkillBundleExtensionTest extends TestCase
         $this->assertCount(1, $tags);
         $this->assertSame('my_agent', $tags[0]['agent']);
         $this->assertSame(-50, $tags[0]['priority']);
+    }
+
+    public function testLoadRegistersTraceableLoaderAndDataCollector(): void
+    {
+        $container = new ContainerBuilder();
+        $extension = new AgentSkillBundleExtension();
+
+        $extension->load([['skills' => [
+            'enabled' => true,
+            'agents' => [
+                'foo' => [
+                    'directories' => ['/tmp/skills'],
+                    'active_skills' => [],
+                ],
+            ],
+        ]]], $container);
+
+        // Traceable loader wraps the filesystem loader
+        $this->assertTrue($container->hasDefinition('agent_skills.foo.traceable_loader'));
+        $traceableDef = $container->getDefinition('agent_skills.foo.traceable_loader');
+        $this->assertSame(TraceableSkillLoader::class, $traceableDef->getClass());
+        $this->assertTrue($traceableDef->hasTag('agent_skills.traceable_skill_loader'));
+
+        // Data collector is registered
+        $this->assertTrue($container->hasDefinition(AgentSkillsDataCollector::class));
+        $collectorDef = $container->getDefinition(AgentSkillsDataCollector::class);
+        $this->assertTrue($collectorDef->hasTag('data_collector'));
+
+        $tag = $collectorDef->getTag('data_collector');
+        $this->assertSame('@AgentSkills/data_collector.html.twig', $tag[0]['template']);
+        $this->assertSame('agent_skill', $tag[0]['id']);
+    }
+
+    public function testInputProcessorUsesTraceableLoader(): void
+    {
+        $container = new ContainerBuilder();
+        $extension = new AgentSkillBundleExtension();
+
+        $extension->load([['skills' => [
+            'enabled' => true,
+            'agents' => [
+                'foo' => [
+                    'directories' => ['/tmp/skills'],
+                    'active_skills' => [],
+                ],
+            ],
+        ]]], $container);
+
+        $inputProcessorArgs = $container->getDefinition('agent_skills.foo.input_processor')->getArguments();
+        $this->assertSame('agent_skills.foo.traceable_loader', (string) $inputProcessorArgs[0]);
+    }
+
+    public function testMultipleAgentsEachGetTraceableLoader(): void
+    {
+        $container = new ContainerBuilder();
+        $extension = new AgentSkillBundleExtension();
+
+        $extension->load([['skills' => [
+            'enabled' => true,
+            'agents' => [
+                'agent_one' => [
+                    'directories' => ['/tmp/skills-one'],
+                    'active_skills' => [],
+                ],
+                'agent_two' => [
+                    'directories' => ['/tmp/skills-two'],
+                    'active_skills' => [],
+                ],
+            ],
+        ]]], $container);
+
+        $this->assertTrue($container->hasDefinition('agent_skills.agent_one.traceable_loader'));
+        $this->assertTrue($container->hasDefinition('agent_skills.agent_two.traceable_loader'));
+
+        $this->assertTrue(
+            $container->getDefinition('agent_skills.agent_one.traceable_loader')->hasTag('agent_skills.traceable_skill_loader'),
+        );
+        $this->assertTrue(
+            $container->getDefinition('agent_skills.agent_two.traceable_loader')->hasTag('agent_skills.traceable_skill_loader'),
+        );
     }
 }
