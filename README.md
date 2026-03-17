@@ -43,7 +43,7 @@ Then configure skills in `config/packages/agent_skills.yaml`:
 
 ```yaml
 # config/packages/agent_skills.yaml
-agent_skills:
+agent_skill_bundle:
     skills:
         enabled: true
         agent: 'ai.agent.agent_with_skills'

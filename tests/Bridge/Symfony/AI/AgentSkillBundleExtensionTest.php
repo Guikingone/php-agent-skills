@@ -36,8 +36,7 @@ final class AgentSkillBundleExtensionTest extends TestCase
         $extension->load([['skills' => ['enabled' => false]]], $container);
 
         $this->assertFalse($container->hasParameter('agent_skills.enabled'));
-        $this->assertFalse($container->hasDefinition('agent_skills.filesystem_loader'));
-        $this->assertFalse($container->hasDefinition('agent_skills.input_processor'));
+        $this->assertFalse($container->hasDefinition('agent_skills.parser'));
     }
 
     public function testLoadRegistersFilesystemLoaderAndInputProcessor(): void
@@ -47,21 +46,25 @@ final class AgentSkillBundleExtensionTest extends TestCase
 
         $extension->load([['skills' => [
             'enabled' => true,
-            'directories' => ['/tmp/skills'],
-            'active_skills' => [],
+            'agents' => [
+                'foo' => [
+                    'directories' => ['/tmp/skills'],
+                    'active_skills' => [],
+                ],
+            ],
         ]]], $container);
 
         $this->assertTrue($container->hasParameter('agent_skills.enabled'));
         $this->assertTrue($container->hasDefinition('agent_skills.parser'));
         $this->assertTrue($container->hasDefinition('agent_skills.validator'));
-        $this->assertTrue($container->hasDefinition('agent_skills.filesystem_loader'));
-        $this->assertTrue($container->hasDefinition('agent_skills.input_processor'));
+        $this->assertTrue($container->hasDefinition('agent_skills.foo.filesystem_loader'));
+        $this->assertTrue($container->hasDefinition('agent_skills.foo.input_processor'));
         $this->assertTrue($container->hasAlias(SkillLoaderInterface::class));
 
         $this->assertSame(SkillParser::class, $container->getDefinition('agent_skills.parser')->getClass());
         $this->assertSame(SkillValidator::class, $container->getDefinition('agent_skills.validator')->getClass());
-        $this->assertSame(FilesystemSkillLoader::class, $container->getDefinition('agent_skills.filesystem_loader')->getClass());
-        $this->assertSame(SkillInputProcessor::class, $container->getDefinition('agent_skills.input_processor')->getClass());
+        $this->assertSame(FilesystemSkillLoader::class, $container->getDefinition('agent_skills.foo.filesystem_loader')->getClass());
+        $this->assertSame(SkillInputProcessor::class, $container->getDefinition('agent_skills.foo.input_processor')->getClass());
     }
 
     public function testLoadRegistersGithubLoaderAndChainLoader(): void
@@ -71,24 +74,28 @@ final class AgentSkillBundleExtensionTest extends TestCase
 
         $extension->load([['skills' => [
             'enabled' => true,
-            'directories' => ['/tmp/skills'],
-            'github_repositories' => [
-                ['repository' => 'my-org/skills', 'path' => '', 'branch' => 'main', 'token' => null],
+            'agents' => [
+                'foo' => [
+                    'directories' => ['/tmp/skills'],
+                    'github_repositories' => [
+                        ['repository' => 'my-org/skills', 'path' => '', 'branch' => 'main', 'token' => null],
+                    ],
+                    'active_skills' => [],
+                ],
             ],
-            'active_skills' => [],
         ]]], $container);
 
-        $this->assertTrue($container->hasDefinition('agent_skills.github_loader'));
-        $this->assertTrue($container->hasDefinition('agent_skills.chain_loader'));
+        $this->assertTrue($container->hasDefinition('agent_skills.foo.github_loader'));
+        $this->assertTrue($container->hasDefinition('agent_skills.foo.chain_loader'));
 
-        $this->assertSame(GithubSkillLoader::class, $container->getDefinition('agent_skills.github_loader')->getClass());
-        $this->assertSame(ChainSkillLoader::class, $container->getDefinition('agent_skills.chain_loader')->getClass());
+        $this->assertSame(GithubSkillLoader::class, $container->getDefinition('agent_skills.foo.github_loader')->getClass());
+        $this->assertSame(ChainSkillLoader::class, $container->getDefinition('agent_skills.foo.chain_loader')->getClass());
 
         // The alias should point to the chain loader when github repos are configured
-        $this->assertSame('agent_skills.chain_loader', (string) $container->getAlias(SkillLoaderInterface::class));
+        $this->assertSame('agent_skills.foo.chain_loader', (string) $container->getAlias(SkillLoaderInterface::class));
     }
 
-    public function testLoadRegistersSkillToolsWhenAgentIsSet(): void
+    public function testLoadRegistersSkillToolsWhenActiveSkillsConfigured(): void
     {
         $container = new ContainerBuilder();
         $extension = new AgentSkillBundleExtension();
@@ -98,11 +105,14 @@ final class AgentSkillBundleExtensionTest extends TestCase
 
         $extension->load([['skills' => [
             'enabled' => true,
-            'agent' => 'my_agent',
-            'directories' => ['/tmp/skills'],
-            'active_skills' => [
-                ['name' => 'code-review'],
-                ['name' => 'twig-component'],
+            'agents' => [
+                'my_agent' => [
+                    'directories' => ['/tmp/skills'],
+                    'active_skills' => [
+                        ['name' => 'code-review'],
+                        ['name' => 'twig-component'],
+                    ],
+                ],
             ],
         ]]], $container);
 
@@ -114,20 +124,20 @@ final class AgentSkillBundleExtensionTest extends TestCase
         $this->assertTrue($toolDefinition->hasTag('ai.agent.skill_as_tool'));
     }
 
-    public function testLoadDoesNotRegisterToolsWhenAgentIsNotSet(): void
+    public function testLoadDoesNotRegisterToolsWhenNoActiveSkills(): void
     {
         $container = new ContainerBuilder();
         $extension = new AgentSkillBundleExtension();
 
         $extension->load([['skills' => [
             'enabled' => true,
-            'directories' => ['/tmp/skills'],
-            'active_skills' => [
-                ['name' => 'code-review'],
+            'agents' => [
+                'foo' => [
+                    'directories' => ['/tmp/skills'],
+                    'active_skills' => [],
+                ],
             ],
         ]]], $container);
-
-        $this->assertFalse($container->hasDefinition('agent_skills.tool..code-review'));
 
         // No SkillTool definitions should exist
         foreach (array_keys($container->getDefinitions()) as $id) {
@@ -142,8 +152,12 @@ final class AgentSkillBundleExtensionTest extends TestCase
 
         $extension->load([['skills' => [
             'enabled' => true,
-            'directories' => ['/tmp/skills'],
-            'active_skills' => [],
+            'agents' => [
+                'foo' => [
+                    'directories' => ['/tmp/skills'],
+                    'active_skills' => [],
+                ],
+            ],
         ]]], $container);
 
         $this->assertTrue($container->hasDefinition('agent_skills.eval_suite_loader'));
@@ -162,8 +176,12 @@ final class AgentSkillBundleExtensionTest extends TestCase
 
         $extension->load([['skills' => [
             'enabled' => true,
-            'directories' => ['/tmp/skills'],
-            'active_skills' => [],
+            'agents' => [
+                'foo' => [
+                    'directories' => ['/tmp/skills'],
+                    'active_skills' => [],
+                ],
+            ],
         ], 'evaluation' => [
             'grading_model' => 'gpt-4o-mini',
             'grading_platform' => 'ai.platform.openai',
@@ -181,8 +199,12 @@ final class AgentSkillBundleExtensionTest extends TestCase
 
         $extension->load([['skills' => [
             'enabled' => true,
-            'directories' => ['/tmp/skills'],
-            'active_skills' => [],
+            'agents' => [
+                'foo' => [
+                    'directories' => ['/tmp/skills'],
+                    'active_skills' => [],
+                ],
+            ],
         ]]], $container);
 
         $this->assertFalse($container->hasDefinition('agent_skills.llm_client'));
@@ -196,8 +218,12 @@ final class AgentSkillBundleExtensionTest extends TestCase
 
         $extension->load([['skills' => [
             'enabled' => true,
-            'directories' => ['/tmp/skills'],
-            'active_skills' => [],
+            'agents' => [
+                'foo' => [
+                    'directories' => ['/tmp/skills'],
+                    'active_skills' => [],
+                ],
+            ],
         ]]], $container);
 
         $this->assertTrue($container->hasDefinition('agent_skills.command.validate_skills'));
@@ -205,18 +231,19 @@ final class AgentSkillBundleExtensionTest extends TestCase
         $this->assertTrue($container->getDefinition('agent_skills.command.validate_skills')->hasTag('console.command'));
     }
 
-    public function testLoadRegistersEvalCommandWhenAgentIsSet(): void
+    public function testLoadRegistersEvalCommandWhenAgentsConfigured(): void
     {
         $container = new ContainerBuilder();
         $extension = new AgentSkillBundleExtension();
 
-        $container->setDefinition('ai.toolbox.my_agent.memory_factory', new Definition(stdClass::class));
-
         $extension->load([['skills' => [
             'enabled' => true,
-            'agent' => 'my_agent',
-            'directories' => ['/tmp/skills'],
-            'active_skills' => [],
+            'agents' => [
+                'my_agent' => [
+                    'directories' => ['/tmp/skills'],
+                    'active_skills' => [],
+                ],
+            ],
         ]]], $container);
 
         $this->assertTrue($container->hasDefinition('agent_skills.command.eval_skill'));
@@ -224,17 +251,17 @@ final class AgentSkillBundleExtensionTest extends TestCase
         $this->assertTrue($container->getDefinition('agent_skills.command.eval_skill')->hasTag('console.command'));
     }
 
-    public function testLoadDoesNotRegisterEvalCommandWhenAgentIsNotSet(): void
+    public function testLoadDoesNotRegisterCommandsWhenNoAgents(): void
     {
         $container = new ContainerBuilder();
         $extension = new AgentSkillBundleExtension();
 
         $extension->load([['skills' => [
             'enabled' => true,
-            'directories' => ['/tmp/skills'],
-            'active_skills' => [],
+            'agents' => [],
         ]]], $container);
 
+        $this->assertFalse($container->hasDefinition('agent_skills.command.validate_skills'));
         $this->assertFalse($container->hasDefinition('agent_skills.command.eval_skill'));
     }
 
@@ -246,14 +273,90 @@ final class AgentSkillBundleExtensionTest extends TestCase
         // Pass active_skills as plain strings — the configuration normalizer should convert them
         $extension->load([['skills' => [
             'enabled' => true,
-            'directories' => ['/tmp/skills'],
-            'active_skills' => ['my-skill', 'other-skill'],
+            'agents' => [
+                'foo' => [
+                    'directories' => ['/tmp/skills'],
+                    'active_skills' => ['my-skill', 'other-skill'],
+                ],
+            ],
         ]]], $container);
 
         // The input processor should have been registered with the normalized skill names
-        $this->assertTrue($container->hasDefinition('agent_skills.input_processor'));
+        $this->assertTrue($container->hasDefinition('agent_skills.foo.input_processor'));
 
-        $inputProcessorArgs = $container->getDefinition('agent_skills.input_processor')->getArguments();
+        $inputProcessorArgs = $container->getDefinition('agent_skills.foo.input_processor')->getArguments();
         $this->assertSame(['my-skill', 'other-skill'], $inputProcessorArgs[1]);
+    }
+
+    public function testLoadRegistersMultipleAgents(): void
+    {
+        $container = new ContainerBuilder();
+        $extension = new AgentSkillBundleExtension();
+
+        $container->setDefinition('ai.toolbox.agent_one.memory_factory', new Definition(stdClass::class));
+        $container->setDefinition('ai.toolbox.agent_two.memory_factory', new Definition(stdClass::class));
+
+        $extension->load([['skills' => [
+            'enabled' => true,
+            'agents' => [
+                'agent_one' => [
+                    'directories' => ['/tmp/skills-one'],
+                    'active_skills' => [
+                        ['name' => 'code-review'],
+                    ],
+                ],
+                'agent_two' => [
+                    'directories' => ['/tmp/skills-two'],
+                    'active_skills' => [
+                        ['name' => 'twig-component'],
+                    ],
+                ],
+            ],
+        ]]], $container);
+
+        // Per-agent loaders
+        $this->assertTrue($container->hasDefinition('agent_skills.agent_one.filesystem_loader'));
+        $this->assertTrue($container->hasDefinition('agent_skills.agent_two.filesystem_loader'));
+
+        // Per-agent input processors
+        $this->assertTrue($container->hasDefinition('agent_skills.agent_one.input_processor'));
+        $this->assertTrue($container->hasDefinition('agent_skills.agent_two.input_processor'));
+
+        // Per-agent tools
+        $this->assertTrue($container->hasDefinition('agent_skills.tool.agent_one.code-review'));
+        $this->assertTrue($container->hasDefinition('agent_skills.tool.agent_two.twig-component'));
+
+        // Global chain loader for multiple agents
+        $this->assertTrue($container->hasDefinition('agent_skills.global_chain_loader'));
+        $this->assertSame(ChainSkillLoader::class, $container->getDefinition('agent_skills.global_chain_loader')->getClass());
+        $this->assertSame('agent_skills.global_chain_loader', (string) $container->getAlias(SkillLoaderInterface::class));
+
+        // Input processor tags contain agent name
+        $agent1Tags = $container->getDefinition('agent_skills.agent_one.input_processor')->getTag('ai.agent.input_processor');
+        $this->assertSame('agent_one', $agent1Tags[0]['agent']);
+
+        $agent2Tags = $container->getDefinition('agent_skills.agent_two.input_processor')->getTag('ai.agent.input_processor');
+        $this->assertSame('agent_two', $agent2Tags[0]['agent']);
+    }
+
+    public function testInputProcessorTagContainsAgentName(): void
+    {
+        $container = new ContainerBuilder();
+        $extension = new AgentSkillBundleExtension();
+
+        $extension->load([['skills' => [
+            'enabled' => true,
+            'agents' => [
+                'my_agent' => [
+                    'directories' => ['/tmp/skills'],
+                    'active_skills' => [],
+                ],
+            ],
+        ]]], $container);
+
+        $tags = $container->getDefinition('agent_skills.my_agent.input_processor')->getTag('ai.agent.input_processor');
+        $this->assertCount(1, $tags);
+        $this->assertSame('my_agent', $tags[0]['agent']);
+        $this->assertSame(-50, $tags[0]['priority']);
     }
 }
