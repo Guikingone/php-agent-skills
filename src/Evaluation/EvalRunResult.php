@@ -9,13 +9,13 @@ namespace AgentSkills\Evaluation;
  *
  * @author Guillaume Loulier <contact@guillaumeloulier.fr>
  */
-final class EvalRunResult
+final readonly class EvalRunResult
 {
     public function __construct(
-        private readonly EvalCase $evalCase,
-        private readonly string $output,
-        private readonly TimingResult $timing,
-        private readonly ?GradingResultInterface $grading = null,
+        private EvalCase $evalCase,
+        private string $output,
+        private TimingResult $timing,
+        private ?GradingResultInterface $grading = null,
     ) {
     }
 

@@ -16,7 +16,7 @@ interface SkillMetadataInterface
     public function getLicense(): ?string;
 
     /**
-     * @return array<string, mixed>
+     * @return list<string>
      */
     public function getAllowedTools(): array;
 

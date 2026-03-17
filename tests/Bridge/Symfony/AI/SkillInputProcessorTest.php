@@ -33,7 +33,7 @@ final class SkillInputProcessorTest extends TestCase
         (new Filesystem())->remove($this->tempDir);
     }
 
-    public function testProcessInputDoesNothingWhenNoSkills()
+    public function testProcessInputDoesNothingWhenNoSkills(): void
     {
         $discovery = new FilesystemSkillLoader([$this->tempDir]);
         $processor = new SkillInputProcessor($discovery);
@@ -44,7 +44,7 @@ final class SkillInputProcessorTest extends TestCase
         $this->assertArrayNotHasKey('system_prompt', $input->getOptions());
     }
 
-    public function testProcessInputIncludesSkillIndex()
+    public function testProcessInputIncludesSkillIndex(): void
     {
         $this->createSkillDirectory('code-review', 'Reviews code changes');
         $this->createSkillDirectory('pdf-reader', 'Reads PDF documents');
@@ -57,13 +57,15 @@ final class SkillInputProcessorTest extends TestCase
 
         $options = $input->getOptions();
         $this->assertArrayHasKey('system_prompt', $options);
-        $this->assertStringContainsString('# Agent Skills', $options['system_prompt']);
-        $this->assertStringContainsString('## Available Skills', $options['system_prompt']);
-        $this->assertStringContainsString('code-review', $options['system_prompt']);
-        $this->assertStringContainsString('pdf-reader', $options['system_prompt']);
+        $systemPrompt = $options['system_prompt'];
+        $this->assertIsString($systemPrompt);
+        $this->assertStringContainsString('# Agent Skills', $systemPrompt);
+        $this->assertStringContainsString('## Available Skills', $systemPrompt);
+        $this->assertStringContainsString('code-review', $systemPrompt);
+        $this->assertStringContainsString('pdf-reader', $systemPrompt);
     }
 
-    public function testProcessInputDoesNotIncludeIndexWhenDisabled()
+    public function testProcessInputDoesNotIncludeIndexWhenDisabled(): void
     {
         $this->createSkillDirectory('my-skill', 'A skill');
 
@@ -76,7 +78,7 @@ final class SkillInputProcessorTest extends TestCase
         $this->assertArrayNotHasKey('system_prompt', $input->getOptions());
     }
 
-    public function testProcessInputLoadsActiveSkillsFully()
+    public function testProcessInputLoadsActiveSkillsFully(): void
     {
         $this->createSkillDirectory('code-review', 'Reviews code');
 
@@ -88,11 +90,13 @@ final class SkillInputProcessorTest extends TestCase
 
         $options = $input->getOptions();
         $this->assertArrayHasKey('system_prompt', $options);
-        $this->assertStringContainsString('## Skill: code-review', $options['system_prompt']);
-        $this->assertStringContainsString('Instructions for code-review.', $options['system_prompt']);
+        $systemPrompt = $options['system_prompt'];
+        $this->assertIsString($systemPrompt);
+        $this->assertStringContainsString('## Skill: code-review', $systemPrompt);
+        $this->assertStringContainsString('Instructions for code-review.', $systemPrompt);
     }
 
-    public function testProcessInputIgnoresMissingActiveSkills()
+    public function testProcessInputIgnoresMissingActiveSkills(): void
     {
         $discovery = new FilesystemSkillLoader([$this->tempDir]);
         $processor = new SkillInputProcessor($discovery, activeSkills: ['non-existent'], includeIndex: false);
@@ -103,7 +107,7 @@ final class SkillInputProcessorTest extends TestCase
         $this->assertArrayNotHasKey('system_prompt', $input->getOptions());
     }
 
-    public function testProcessInputCombinesIndexAndActiveSkills()
+    public function testProcessInputCombinesIndexAndActiveSkills(): void
     {
         $this->createSkillDirectory('skill-a', 'Skill A description');
         $this->createSkillDirectory('skill-b', 'Skill B description');
@@ -115,19 +119,21 @@ final class SkillInputProcessorTest extends TestCase
         $processor->processInput($input);
 
         $options = $input->getOptions();
-        $prompt = $options['system_prompt'];
+        $this->assertArrayHasKey('system_prompt', $options);
+        $systemPrompt = $options['system_prompt'];
+        $this->assertIsString($systemPrompt);
 
         // Index should contain both skills
-        $this->assertStringContainsString('## Available Skills', $prompt);
-        $this->assertStringContainsString('skill-a', $prompt);
-        $this->assertStringContainsString('skill-b', $prompt);
+        $this->assertStringContainsString('## Available Skills', $systemPrompt);
+        $this->assertStringContainsString('skill-a', $systemPrompt);
+        $this->assertStringContainsString('skill-b', $systemPrompt);
 
         // Active skill body should be loaded
-        $this->assertStringContainsString('## Skill: skill-a', $prompt);
-        $this->assertStringContainsString('Instructions for skill-a.', $prompt);
+        $this->assertStringContainsString('## Skill: skill-a', $systemPrompt);
+        $this->assertStringContainsString('Instructions for skill-a.', $systemPrompt);
     }
 
-    public function testProcessInputAppendsToExistingSystemPrompt()
+    public function testProcessInputAppendsToExistingSystemPrompt(): void
     {
         $this->createSkillDirectory('my-skill', 'A skill');
 
@@ -140,8 +146,11 @@ final class SkillInputProcessorTest extends TestCase
         $processor->processInput($input);
 
         $options = $input->getOptions();
-        $this->assertStringStartsWith('You are a helpful assistant.', $options['system_prompt']);
-        $this->assertStringContainsString('# Agent Skills', $options['system_prompt']);
+        $this->assertArrayHasKey('system_prompt', $options);
+        $systemPrompt = $options['system_prompt'];
+        $this->assertIsString($systemPrompt);
+        $this->assertStringStartsWith('You are a helpful assistant.', $systemPrompt);
+        $this->assertStringContainsString('# Agent Skills', $systemPrompt);
     }
 
     private function createSkillDirectory(string $name, string $description): void

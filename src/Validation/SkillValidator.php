@@ -7,9 +7,7 @@ namespace AgentSkills\Validation;
 use AgentSkills\SkillInterface;
 use Symfony\Component\String\UnicodeString;
 
-use function array_filter;
 use function array_keys;
-use function array_values;
 use function implode;
 use function in_array;
 use function is_string;
@@ -21,7 +19,7 @@ use function trim;
  */
 final class SkillValidator implements SkillValidatorInterface
 {
-    private const ALLOWED_FIELDS = ['name', 'description', 'license', 'compatibility', 'metadata', 'allowed-tools'];
+    private const array ALLOWED_FIELDS = ['name', 'description', 'license', 'compatibility', 'metadata', 'allowed-tools'];
 
     public function validate(SkillInterface $skill): SkillValidationResult
     {
@@ -60,18 +58,7 @@ final class SkillValidator implements SkillValidatorInterface
             $errors[] = 'Field "license" must be a non-empty string.';
         }
 
-        // 4. Validate optional allowed-tools field
-        $allowedTools = $metadata->getAllowedTools();
-        $nonStringTools = array_filter(
-            $allowedTools,
-            static fn (mixed $tool): bool => !is_string($tool),
-        );
-
-        if ([] !== $allowedTools && [] !== $nonStringTools) {
-            $errors[] = sprintf('Field "allowed-fields" must contains strings, the following tools are not valid: "%s".', implode(', ', $allowedTools));
-        }
-
-        // 5. Validate optional compatibility field
+        // 4. Validate optional compatibility field
         $compatibility = $metadata->getCompatibility();
         if (null !== $compatibility) {
             $unicodeCompat = new UnicodeString($compatibility);
@@ -83,13 +70,15 @@ final class SkillValidator implements SkillValidatorInterface
         }
 
         $metadataFields = $metadata->getMetadata();
-        $nonStringFields = array_filter(
-            array_values($metadataFields),
-            static fn (mixed $value): bool => !is_string($value),
-        );
+        $nonStringKeys = [];
+        foreach ($metadataFields as $key => $value) {
+            if (!is_string($value)) {
+                $nonStringKeys[] = $key;
+            }
+        }
 
-        if ([] !== $metadataFields && [] !== $nonStringFields) {
-            $errors[] = sprintf('Field "metadata" must contains strings either as keys and values, the following values are not valid: "%s".', implode(', ', $nonStringFields));
+        if ([] !== $nonStringKeys) {
+            $errors[] = sprintf('Field "metadata" must contain strings as values, the following keys have non-string values: "%s".', implode(', ', $nonStringKeys));
         }
 
         // 7. Check body content

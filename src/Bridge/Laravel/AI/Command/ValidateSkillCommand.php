@@ -10,6 +10,7 @@ use AgentSkills\Validation\SkillValidatorInterface;
 use Illuminate\Console\Command;
 
 use function count;
+use function is_string;
 use function sprintf;
 
 /**
@@ -34,7 +35,7 @@ final class ValidateSkillCommand extends Command
     {
         $skillName = $this->option('skill');
 
-        if (null !== $skillName) {
+        if (is_string($skillName) && '' !== $skillName) {
             return $this->validateSingleSkill($skillName);
         }
 
@@ -45,7 +46,7 @@ final class ValidateSkillCommand extends Command
     {
         $skill = $this->skillLoader->loadSkill($skillName);
 
-        if (null === $skill) {
+        if (!$skill instanceof SkillInterface) {
             $this->error(sprintf('Skill "%s" not found.', $skillName));
 
             return self::FAILURE;

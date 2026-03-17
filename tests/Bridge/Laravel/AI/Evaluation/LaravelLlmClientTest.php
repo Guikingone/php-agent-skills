@@ -15,16 +15,14 @@ use PHPUnit\Framework\TestCase;
 
 final class LaravelLlmClientTest extends TestCase
 {
-    public function testGenerateReturnsText()
+    public function testGenerateReturnsText(): void
     {
         $response = new AgentResponse('inv-1', 'Graded output', new Usage(), new Meta());
 
         $textProvider = $this->createMock(TextProvider::class);
         $textProvider->expects($this->once())
             ->method('prompt')
-            ->with($this->callback(static function (AgentPrompt $prompt): bool {
-                return 'Grade this output' === $prompt->prompt && 'gpt-4o-mini' === $prompt->model;
-            }))
+            ->with($this->callback(static fn (AgentPrompt $prompt): bool => 'Grade this output' === $prompt->prompt && 'gpt-4o-mini' === $prompt->model))
             ->willReturn($response);
 
         $ai = $this->createMock(AiManager::class);

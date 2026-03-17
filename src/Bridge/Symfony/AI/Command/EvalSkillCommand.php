@@ -25,6 +25,8 @@ use Symfony\Component\DependencyInjection\ServiceLocator;
 use Throwable;
 
 use function count;
+use function is_int;
+use function is_string;
 use function mb_substr;
 use function sprintf;
 
@@ -67,8 +69,15 @@ final class EvalSkillCommand extends Command
         $io = new SymfonyStyle($input, $output);
 
         $skillDirectory = $input->getArgument('skill-directory');
-        $iteration = (int) $input->getOption('iteration');
-        $skipGrading = $input->getOption('skip-grading');
+        if (!is_string($skillDirectory) || '' === $skillDirectory) {
+            $io->error('The skill-directory argument is required.');
+
+            return Command::FAILURE;
+        }
+
+        $iterationRaw = $input->getOption('iteration');
+        $iteration = is_string($iterationRaw) || is_int($iterationRaw) ? (int) $iterationRaw : 1;
+        $skipGrading = true === $input->getOption('skip-grading');
 
         try {
             $suite = $this->evalSuiteLoader->load($skillDirectory);
@@ -82,9 +91,7 @@ final class EvalSkillCommand extends Command
         $io->writeln(sprintf('Found %d eval case(s)', count($suite->getEvals())));
 
         $agentName = $input->getOption('agent');
-        $baselineAgentName = $input->getOption('baseline-agent');
-
-        if (null === $agentName) {
+        if (!is_string($agentName) || '' === $agentName) {
             $io->error('The --agent option is required.');
 
             return Command::FAILURE;
@@ -101,7 +108,8 @@ final class EvalSkillCommand extends Command
         $withSkillResults = $this->runEvals($io, $suite, $agentName, $iteration, 'with_skill', $skipGrading);
 
         $withoutSkillResults = [];
-        if (null !== $baselineAgentName) {
+        $baselineAgentName = $input->getOption('baseline-agent');
+        if (is_string($baselineAgentName) && '' !== $baselineAgentName) {
             if (!$this->agentLocator->has($baselineAgentName)) {
                 $io->error(sprintf('Baseline agent "%s" not found.', $baselineAgentName));
 
@@ -154,7 +162,7 @@ final class EvalSkillCommand extends Command
             $this->workspaceManager->saveOutput($evalDir, $runResult->getOutput());
             $this->workspaceManager->saveTimingResult($evalDir, $runResult->getTiming());
 
-            if (!$skipGrading && null !== $this->grader && [] !== $evalCase->getAssertions()) {
+            if (!$skipGrading && $this->grader instanceof GraderInterface && [] !== $evalCase->getAssertions()) {
                 $grading = $this->grader->grade($runResult->getOutput(), $evalCase->getAssertions(), $evalCase->getExpectedOutput());
                 $runResult = $runResult->withGrading($grading);
                 $this->workspaceManager->saveGradingResult($evalDir, $grading);

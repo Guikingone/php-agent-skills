@@ -9,6 +9,7 @@ use AgentSkills\Evaluation\GradingResult;
 use AgentSkills\Exception\RuntimeException;
 
 use function is_array;
+use function is_string;
 use function json_decode;
 use function sprintf;
 
@@ -17,10 +18,10 @@ use function sprintf;
  *
  * @author Guillaume Loulier <contact@guillaumeloulier.fr>
  */
-final class LlmGrader implements GraderInterface
+final readonly class LlmGrader implements GraderInterface
 {
     public function __construct(
-        private readonly LlmClientInterface $client,
+        private LlmClientInterface $client,
     ) {
     }
 
@@ -65,6 +66,8 @@ final class LlmGrader implements GraderInterface
             throw new RuntimeException(sprintf('Malformed grading response from LLM: "%s".', $responseText));
         }
 
-        return new AssertionResult($assertion, (bool) $data['passed'], (string) $data['evidence']);
+        $evidence = $data['evidence'];
+
+        return new AssertionResult($assertion, (bool) $data['passed'], is_string($evidence) ? $evidence : '');
     }
 }

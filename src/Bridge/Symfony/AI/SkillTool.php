@@ -12,6 +12,7 @@ use Symfony\Component\Process\Exception\ProcessFailedException;
 use Symfony\Component\Process\Process;
 
 use function array_map;
+use function is_string;
 use function pathinfo;
 use function sprintf;
 
@@ -24,11 +25,11 @@ use const PHP_BINARY;
 #[AsTool('get_skill', 'Load a skill by name', method: 'loadSkill')]
 #[AsTool('get_skills', 'Get all available skills', method: 'loadSkills')]
 #[AsTool('execute_skill_script', 'Execute a script from a skill', method: 'executeScript')]
-final class SkillTool
+final readonly class SkillTool
 {
     public function __construct(
-        private readonly SkillLoaderInterface $loader,
-        private readonly string $skillName,
+        private SkillLoaderInterface $loader,
+        private string $skillName,
     ) {
     }
 
@@ -48,7 +49,9 @@ final class SkillTool
         if (null !== $reference) {
             try {
                 $referenceContent = $skill->loadReference($reference);
-                $output .= sprintf("\n\n## Reference: %s\n\n%s", $reference, $referenceContent);
+                if (is_string($referenceContent)) {
+                    $output .= sprintf("\n\n## Reference: %s\n\n%s", $reference, $referenceContent);
+                }
             } catch (RuntimeException $e) {
                 $output .= sprintf("\n\n> Reference \"%s\" could not be loaded: %s", $reference, $e->getMessage());
             }
@@ -97,6 +100,10 @@ final class SkillTool
             return sprintf('Error loading script "%s": "%s".', $script, $e->getMessage());
         }
 
+        if (!is_string($scriptPath)) {
+            return sprintf('Script "%s" returned an invalid path.', $script);
+        }
+
         // Determine the interpreter based on file extension
         $interpreter = $this->getInterpreter($scriptPath);
         $command = $interpreter ? [$interpreter, $scriptPath, ...$arguments] : [$scriptPath, ...$arguments];
@@ -108,7 +115,7 @@ final class SkillTool
             $process->mustRun();
 
             return sprintf("# Script execution: %s\n\n## Output\n\n```\n%s\n```", $script, $process->getOutput());
-        } catch (ProcessFailedException $e) {
+        } catch (ProcessFailedException) {
             return sprintf(
                 "# Script execution failed: %s\n\n## Error\n\n```\n%s\n```\n\n## Output\n\n```\n%s\n```",
                 $script,

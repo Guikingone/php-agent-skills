@@ -15,6 +15,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
 use function count;
+use function is_string;
 use function sprintf;
 
 /**
@@ -45,7 +46,7 @@ final class ValidateSkillCommand extends Command
 
         $skillName = $input->getOption('skill');
 
-        if (null !== $skillName) {
+        if (is_string($skillName) && '' !== $skillName) {
             return $this->validateSingleSkill($io, $skillName);
         }
 
@@ -56,7 +57,7 @@ final class ValidateSkillCommand extends Command
     {
         $skill = $this->skillLoader->loadSkill($skillName);
 
-        if (null === $skill) {
+        if (!$skill instanceof SkillInterface) {
             $io->error(sprintf('Skill "%s" not found.', $skillName));
 
             return Command::FAILURE;

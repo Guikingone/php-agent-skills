@@ -12,7 +12,7 @@ use PHPUnit\Framework\TestCase;
 
 final class ChainSkillLoaderTest extends TestCase
 {
-    public function testLoadSkillReturnsFirstMatch()
+    public function testLoadSkillReturnsFirstMatch(): void
     {
         $skill = new Skill('Body.', new SkillMetadata('my-skill', 'A skill'));
 
@@ -27,7 +27,7 @@ final class ChainSkillLoaderTest extends TestCase
         $this->assertSame($skill, $chain->loadSkill('my-skill'));
     }
 
-    public function testLoadSkillReturnsNullWhenNoneFound()
+    public function testLoadSkillReturnsNullWhenNoneFound(): void
     {
         $loader1 = $this->createMock(SkillLoaderInterface::class);
         $loader1->expects($this->once())->method('loadSkill')->willReturn(null);
@@ -40,7 +40,7 @@ final class ChainSkillLoaderTest extends TestCase
         $this->assertNull($chain->loadSkill('missing-skill'));
     }
 
-    public function testLoadSkillStopsAtFirstMatch()
+    public function testLoadSkillStopsAtFirstMatch(): void
     {
         $skill = new Skill('Body.', new SkillMetadata('my-skill', 'A skill'));
 
@@ -55,7 +55,7 @@ final class ChainSkillLoaderTest extends TestCase
         $this->assertSame($skill, $chain->loadSkill('my-skill'));
     }
 
-    public function testLoadSkillsAggregatesFromAllLoaders()
+    public function testLoadSkillsAggregatesFromAllLoaders(): void
     {
         $skill1 = new Skill('Body 1.', new SkillMetadata('skill-one', 'First skill'));
         $skill2 = new Skill('Body 2.', new SkillMetadata('skill-two', 'Second skill'));
@@ -74,7 +74,7 @@ final class ChainSkillLoaderTest extends TestCase
         $this->assertArrayHasKey('skill-two', $skills);
     }
 
-    public function testLoadSkillsFirstLoaderWinsOnConflict()
+    public function testLoadSkillsFirstLoaderWinsOnConflict(): void
     {
         $skill1 = new Skill('From loader 1.', new SkillMetadata('my-skill', 'First version'));
         $skill2 = new Skill('From loader 2.', new SkillMetadata('my-skill', 'Second version'));
@@ -92,7 +92,7 @@ final class ChainSkillLoaderTest extends TestCase
         $this->assertSame('From loader 1.', $skills['my-skill']->getBody());
     }
 
-    public function testDiscoverMetadataAggregatesFromAllLoaders()
+    public function testDiscoverMetadataAggregatesFromAllLoaders(): void
     {
         $meta1 = new SkillMetadata('skill-one', 'First');
         $meta2 = new SkillMetadata('skill-two', 'Second');
@@ -111,7 +111,7 @@ final class ChainSkillLoaderTest extends TestCase
         $this->assertArrayHasKey('skill-two', $metadata);
     }
 
-    public function testDiscoverMetadataFirstLoaderWinsOnConflict()
+    public function testDiscoverMetadataFirstLoaderWinsOnConflict(): void
     {
         $meta1 = new SkillMetadata('my-skill', 'First version');
         $meta2 = new SkillMetadata('my-skill', 'Second version');

@@ -28,10 +28,10 @@ use function sprintf;
  *
  * @author Guillaume Loulier <contact@guillaumeloulier.fr>
  */
-final class SkillParser implements SkillParserInterface
+final readonly class SkillParser implements SkillParserInterface
 {
     public function __construct(
-        private readonly Filesystem $filesystem = new Filesystem(),
+        private Filesystem $filesystem = new Filesystem(),
     ) {
     }
 
@@ -212,10 +212,6 @@ final class SkillParser implements SkillParserInterface
             $nestedMatch = $line->match('/^(\s{2,})([\w][\w-]*):\s*(.*)$/');
             if ([] !== $nestedMatch && null !== $currentKey) {
                 $value = (new UnicodeString($nestedMatch[3]))->trim()->trim('"\'')->toString();
-                if (!isset($result[$currentKey]) || !is_array($result[$currentKey])) {
-                    $result[$currentKey] = [];
-                }
-
                 $result[$currentKey][$nestedMatch[2]] = $value;
 
                 continue;

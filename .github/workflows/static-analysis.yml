@@ -25,7 +25,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php-versions }}
-          extensions: zip, redis, pcntl
+          extensions: zip
         env:
           update: true
 
@@ -39,4 +39,4 @@ jobs:
           composer-options: '--prefer-stable'
 
       - name: Run PHPStan
-        run: php vendor/bin/phpstan analyze --xdebug --configuration phpstan.neon.${{ matrix.php-versions }}.dist
+        run: php vendor/bin/phpstan analyze --configuration phpstan.neon.${{ matrix.composer-dependencies }}.dist

@@ -29,7 +29,7 @@ final class SkillTest extends TestCase
         (new Filesystem())->remove($this->tempDir);
     }
 
-    public function testGetMetadata()
+    public function testGetMetadata(): void
     {
         $metadata = new SkillMetadata('my-skill', 'A skill');
         $skill = new Skill('foo', $metadata);
@@ -37,14 +37,14 @@ final class SkillTest extends TestCase
         $this->assertSame($metadata, $skill->getMetadata());
     }
 
-    public function testGetNameDelegatesToMetadata()
+    public function testGetNameDelegatesToMetadata(): void
     {
         $skill = new Skill('foo', new SkillMetadata('my-skill', 'A skill'));
 
         $this->assertSame('my-skill', $skill->getName());
     }
 
-    public function testGetDescriptionDelegatesToMetadata()
+    public function testGetDescriptionDelegatesToMetadata(): void
     {
         $metadata = new SkillMetadata('my-skill', 'A useful skill');
         $skill = new Skill('foo', $metadata);
@@ -52,7 +52,7 @@ final class SkillTest extends TestCase
         $this->assertSame('A useful skill', $skill->getDescription());
     }
 
-    public function testGetBody()
+    public function testGetBody(): void
     {
         $metadata = new SkillMetadata('my-skill', 'A skill');
         $skill = new Skill('This is the instruction body.', $metadata);
@@ -60,7 +60,7 @@ final class SkillTest extends TestCase
         $this->assertSame('This is the instruction body.', $skill->getBody());
     }
 
-    public function testLoadScriptReturnsPath()
+    public function testLoadScriptReturnsPath(): void
     {
         $scriptPath = $this->tempDir . '/scripts/setup.sh';
 
@@ -70,7 +70,7 @@ final class SkillTest extends TestCase
         $this->assertSame($scriptPath, $skill->loadScript('setup.sh'));
     }
 
-    public function testLoadReferenceReturnsContent()
+    public function testLoadReferenceReturnsContent(): void
     {
         $metadata = new SkillMetadata('my-skill', 'A skill');
         $skill = new Skill('body', $metadata, referencesLoader: static fn (string $ref): string => '# API Reference');
@@ -78,7 +78,7 @@ final class SkillTest extends TestCase
         $this->assertSame('# API Reference', $skill->loadReference('api.md'));
     }
 
-    public function testLoadAssetReturnsPath()
+    public function testLoadAssetReturnsPath(): void
     {
         $assetPath = $this->tempDir . '/assets/logo.png';
 

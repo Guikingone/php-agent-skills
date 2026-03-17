@@ -9,12 +9,12 @@ namespace AgentSkills\Evaluation;
  *
  * @author Guillaume Loulier <contact@guillaumeloulier.fr>
  */
-final class AssertionResult
+final readonly class AssertionResult
 {
     public function __construct(
-        private readonly string $text,
-        private readonly bool $passed,
-        private readonly string $evidence,
+        private string $text,
+        private bool $passed,
+        private string $evidence,
     ) {
     }
 

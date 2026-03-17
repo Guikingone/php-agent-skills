@@ -14,6 +14,8 @@ use function json_encode;
 use function random_bytes;
 use function sys_get_temp_dir;
 
+use const JSON_THROW_ON_ERROR;
+
 final class EvalSuiteLoaderTest extends TestCase
 {
     private string $tempDir;
@@ -30,7 +32,7 @@ final class EvalSuiteLoaderTest extends TestCase
         (new Filesystem())->remove($this->tempDir);
     }
 
-    public function testLoadValidJson()
+    public function testLoadValidJson(): void
     {
         $data = [
             'skill_name' => 'test-skill',
@@ -40,7 +42,7 @@ final class EvalSuiteLoaderTest extends TestCase
             ],
         ];
 
-        (new Filesystem())->dumpFile($this->tempDir . '/evals/evals.json', json_encode($data));
+        (new Filesystem())->dumpFile($this->tempDir . '/evals/evals.json', json_encode($data, JSON_THROW_ON_ERROR));
 
         $suite = (new EvalSuiteLoader())->load($this->tempDir);
 
@@ -58,7 +60,7 @@ final class EvalSuiteLoaderTest extends TestCase
         $this->assertSame(['Mentions classes'], $second->getAssertions());
     }
 
-    public function testLoadThrowsWhenFileMissing()
+    public function testLoadThrowsWhenFileMissing(): void
     {
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Eval file not found');
@@ -66,7 +68,7 @@ final class EvalSuiteLoaderTest extends TestCase
         (new EvalSuiteLoader())->load($this->tempDir . '/nonexistent');
     }
 
-    public function testLoadThrowsOnMalformedJson()
+    public function testLoadThrowsOnMalformedJson(): void
     {
         (new Filesystem())->dumpFile($this->tempDir . '/evals/evals.json', '{invalid json');
 
@@ -76,11 +78,11 @@ final class EvalSuiteLoaderTest extends TestCase
         (new EvalSuiteLoader())->load($this->tempDir);
     }
 
-    public function testLoadThrowsOnMissingSkillName()
+    public function testLoadThrowsOnMissingSkillName(): void
     {
         $data = ['evals' => [['id' => 1, 'prompt' => 'test', 'expected_output' => 'out']]];
 
-        (new Filesystem())->dumpFile($this->tempDir . '/evals/evals.json', json_encode($data));
+        (new Filesystem())->dumpFile($this->tempDir . '/evals/evals.json', json_encode($data, JSON_THROW_ON_ERROR));
 
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Missing or invalid "skill_name"');
@@ -88,11 +90,11 @@ final class EvalSuiteLoaderTest extends TestCase
         (new EvalSuiteLoader())->load($this->tempDir);
     }
 
-    public function testLoadThrowsOnMissingEvals()
+    public function testLoadThrowsOnMissingEvals(): void
     {
         $data = ['skill_name' => 'test-skill'];
 
-        (new Filesystem())->dumpFile($this->tempDir . '/evals/evals.json', json_encode($data));
+        (new Filesystem())->dumpFile($this->tempDir . '/evals/evals.json', json_encode($data, JSON_THROW_ON_ERROR));
 
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Missing or invalid "evals"');
@@ -100,14 +102,14 @@ final class EvalSuiteLoaderTest extends TestCase
         (new EvalSuiteLoader())->load($this->tempDir);
     }
 
-    public function testLoadThrowsOnMissingRequiredEvalFields()
+    public function testLoadThrowsOnMissingRequiredEvalFields(): void
     {
         $data = [
             'skill_name' => 'test-skill',
             'evals' => [['id' => 1, 'prompt' => 'test']],
         ];
 
-        (new Filesystem())->dumpFile($this->tempDir . '/evals/evals.json', json_encode($data));
+        (new Filesystem())->dumpFile($this->tempDir . '/evals/evals.json', json_encode($data, JSON_THROW_ON_ERROR));
 
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Missing or invalid "expected_output"');

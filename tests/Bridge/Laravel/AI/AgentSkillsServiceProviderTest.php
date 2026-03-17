@@ -16,20 +16,21 @@ use AgentSkills\SkillParserInterface;
 use AgentSkills\Validation\SkillValidatorInterface;
 use Illuminate\Config\Repository;
 use Illuminate\Container\Container;
+use Illuminate\Foundation\Application;
 use PHPUnit\Framework\TestCase;
 
 use function sys_get_temp_dir;
 
 final class AgentSkillsServiceProviderTest extends TestCase
 {
-    private Container $container;
+    private Application $app;
+    private Repository $config;
 
     protected function setUp(): void
     {
-        $this->container = new Container();
-        Container::setInstance($this->container);
-
-        $this->container->instance('config', new Repository());
+        $this->app = new Application(sys_get_temp_dir());
+        $this->config = new Repository();
+        $this->app->instance('config', $this->config);
     }
 
     protected function tearDown(): void
@@ -37,111 +38,111 @@ final class AgentSkillsServiceProviderTest extends TestCase
         Container::setInstance(null);
     }
 
-    public function testDoesNothingWhenDisabled()
+    public function testDoesNothingWhenDisabled(): void
     {
-        $this->container['config']->set('agent-skills.skills.enabled', false);
+        $this->config->set('agent-skills.skills.enabled', false);
 
-        $provider = new AgentSkillsServiceProvider($this->container);
+        $provider = new AgentSkillsServiceProvider($this->app);
         $provider->register();
 
-        $this->assertFalse($this->container->bound(SkillParserInterface::class));
-        $this->assertFalse($this->container->bound(SkillValidatorInterface::class));
+        $this->assertFalse($this->app->bound(SkillParserInterface::class));
+        $this->assertFalse($this->app->bound(SkillValidatorInterface::class));
     }
 
-    public function testRegistersCoreSingletons()
-    {
-        $this->configureEnabled();
-
-        $provider = new AgentSkillsServiceProvider($this->container);
-        $provider->register();
-
-        $this->assertTrue($this->container->bound(SkillParserInterface::class));
-        $this->assertTrue($this->container->bound(SkillValidatorInterface::class));
-    }
-
-    public function testRegistersFilesystemLoader()
+    public function testRegistersCoreSingletons(): void
     {
         $this->configureEnabled();
 
-        $provider = new AgentSkillsServiceProvider($this->container);
+        $provider = new AgentSkillsServiceProvider($this->app);
         $provider->register();
 
-        $this->assertTrue($this->container->bound('agent_skills.filesystem_loader'));
+        $this->assertTrue($this->app->bound(SkillParserInterface::class));
+        $this->assertTrue($this->app->bound(SkillValidatorInterface::class));
     }
 
-    public function testRegistersSkillLoaderAlias()
+    public function testRegistersFilesystemLoader(): void
     {
         $this->configureEnabled();
 
-        $provider = new AgentSkillsServiceProvider($this->container);
+        $provider = new AgentSkillsServiceProvider($this->app);
         $provider->register();
 
-        $this->assertTrue($this->container->bound(SkillLoaderInterface::class) || $this->container->isAlias(SkillLoaderInterface::class));
+        $this->assertTrue($this->app->bound('agent_skills.filesystem_loader'));
     }
 
-    public function testRegistersMiddleware()
+    public function testRegistersSkillLoaderAlias(): void
     {
         $this->configureEnabled();
 
-        $provider = new AgentSkillsServiceProvider($this->container);
+        $provider = new AgentSkillsServiceProvider($this->app);
         $provider->register();
 
-        $this->assertTrue($this->container->bound(SkillPromptMiddleware::class));
+        $this->assertTrue($this->app->bound(SkillLoaderInterface::class) || $this->app->isAlias(SkillLoaderInterface::class));
     }
 
-    public function testRegistersGetSkillsTool()
+    public function testRegistersMiddleware(): void
     {
         $this->configureEnabled();
 
-        $provider = new AgentSkillsServiceProvider($this->container);
+        $provider = new AgentSkillsServiceProvider($this->app);
         $provider->register();
 
-        $this->assertTrue($this->container->bound(GetSkillsTool::class));
+        $this->assertTrue($this->app->bound(SkillPromptMiddleware::class));
     }
 
-    public function testRegistersPerSkillTools()
+    public function testRegistersGetSkillsTool(): void
+    {
+        $this->configureEnabled();
+
+        $provider = new AgentSkillsServiceProvider($this->app);
+        $provider->register();
+
+        $this->assertTrue($this->app->bound(GetSkillsTool::class));
+    }
+
+    public function testRegistersPerSkillTools(): void
     {
         $this->configureEnabled(['active_skills' => ['code-review', 'testing']]);
 
-        $provider = new AgentSkillsServiceProvider($this->container);
+        $provider = new AgentSkillsServiceProvider($this->app);
         $provider->register();
 
-        $this->assertTrue($this->container->bound('agent_skills.tool.get_skill.code-review'));
-        $this->assertTrue($this->container->bound('agent_skills.tool.execute_script.code-review'));
-        $this->assertTrue($this->container->bound('agent_skills.tool.get_skill.testing'));
-        $this->assertTrue($this->container->bound('agent_skills.tool.execute_script.testing'));
+        $this->assertTrue($this->app->bound('agent_skills.tool.get_skill.code-review'));
+        $this->assertTrue($this->app->bound('agent_skills.tool.execute_script.code-review'));
+        $this->assertTrue($this->app->bound('agent_skills.tool.get_skill.testing'));
+        $this->assertTrue($this->app->bound('agent_skills.tool.execute_script.testing'));
     }
 
-    public function testRegistersEvaluationServices()
+    public function testRegistersEvaluationServices(): void
     {
         $this->configureEnabled();
 
-        $provider = new AgentSkillsServiceProvider($this->container);
+        $provider = new AgentSkillsServiceProvider($this->app);
         $provider->register();
 
-        $this->assertTrue($this->container->bound(EvalSuiteLoaderInterface::class));
-        $this->assertTrue($this->container->bound(WorkspaceManagerInterface::class));
-        $this->assertTrue($this->container->bound(BenchmarkAggregatorInterface::class));
+        $this->assertTrue($this->app->bound(EvalSuiteLoaderInterface::class));
+        $this->assertTrue($this->app->bound(WorkspaceManagerInterface::class));
+        $this->assertTrue($this->app->bound(BenchmarkAggregatorInterface::class));
     }
 
-    public function testDoesNotRegisterGraderWhenNotConfigured()
+    public function testDoesNotRegisterGraderWhenNotConfigured(): void
     {
         $this->configureEnabled();
 
-        $provider = new AgentSkillsServiceProvider($this->container);
+        $provider = new AgentSkillsServiceProvider($this->app);
         $provider->register();
 
-        $this->assertFalse($this->container->bound(GraderInterface::class));
+        $this->assertFalse($this->app->bound(GraderInterface::class));
     }
 
-    public function testRegistersGraderWhenConfigured()
+    public function testRegistersGraderWhenConfigured(): void
     {
         $this->configureEnabled([], ['grading_model' => 'gpt-4o-mini', 'grading_provider' => 'openai']);
 
-        $provider = new AgentSkillsServiceProvider($this->container);
+        $provider = new AgentSkillsServiceProvider($this->app);
         $provider->register();
 
-        $this->assertTrue($this->container->bound(GraderInterface::class));
+        $this->assertTrue($this->app->bound(GraderInterface::class));
     }
 
     /**
@@ -167,7 +168,7 @@ final class AgentSkillsServiceProviderTest extends TestCase
             ...$evalOverrides,
         ];
 
-        $this->container['config']->set('agent-skills.skills', $skills);
-        $this->container['config']->set('agent-skills.evaluation', $evaluation);
+        $this->config->set('agent-skills.skills', $skills);
+        $this->config->set('agent-skills.evaluation', $evaluation);
     }
 }

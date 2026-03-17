@@ -9,15 +9,15 @@ namespace AgentSkills\Evaluation;
  *
  * @author Guillaume Loulier <contact@guillaumeloulier.fr>
  */
-final class EvalSuite
+final readonly class EvalSuite
 {
     /**
      * @param string $skillName The skill this suite evaluates
      * @param EvalCase[] $evals The evaluation cases
      */
     public function __construct(
-        private readonly string $skillName,
-        private readonly array $evals,
+        private string $skillName,
+        private array $evals,
     ) {
     }
 

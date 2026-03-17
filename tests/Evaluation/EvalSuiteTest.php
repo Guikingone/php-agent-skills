@@ -10,7 +10,7 @@ use PHPUnit\Framework\TestCase;
 
 final class EvalSuiteTest extends TestCase
 {
-    public function testConstruction()
+    public function testConstruction(): void
     {
         $evals = [
             new EvalCase(1, 'prompt1', 'output1'),
@@ -23,7 +23,7 @@ final class EvalSuiteTest extends TestCase
         $this->assertCount(2, $suite->getEvals());
     }
 
-    public function testGetEvalByIdReturnsMatchingCase()
+    public function testGetEvalByIdReturnsMatchingCase(): void
     {
         $evals = [
             new EvalCase(1, 'prompt1', 'output1'),
@@ -38,7 +38,7 @@ final class EvalSuiteTest extends TestCase
         $this->assertSame('prompt2', $found->getPrompt());
     }
 
-    public function testGetEvalByIdReturnsNullWhenNotFound()
+    public function testGetEvalByIdReturnsNullWhenNotFound(): void
     {
         $suite = new EvalSuite('my-skill', [new EvalCase(1, 'prompt', 'output')]);
 

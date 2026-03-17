@@ -24,6 +24,8 @@ use stdClass;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
 
+use function array_keys;
+
 final class AgentSkillBundleExtensionTest extends TestCase
 {
     public function testLoadDoesNothingWhenDisabled(): void
@@ -128,7 +130,7 @@ final class AgentSkillBundleExtensionTest extends TestCase
         $this->assertFalse($container->hasDefinition('agent_skills.tool..code-review'));
 
         // No SkillTool definitions should exist
-        foreach ($container->getDefinitions() as $id => $definition) {
+        foreach (array_keys($container->getDefinitions()) as $id) {
             $this->assertStringNotContainsString('agent_skills.tool.', $id);
         }
     }

@@ -18,10 +18,10 @@ use function is_string;
  *
  * @author Guillaume Loulier <contact@guillaumeloulier.fr>
  */
-final class SymfonyAgentExecutor implements AgentExecutorInterface
+final readonly class SymfonyAgentExecutor implements AgentExecutorInterface
 {
     public function __construct(
-        private readonly AgentInterface $agent,
+        private AgentInterface $agent,
     ) {
     }
 
@@ -40,7 +40,7 @@ final class SymfonyAgentExecutor implements AgentExecutorInterface
         }
 
         $content = $result->getContent();
-        $output = is_string($content) ? $content : (string) $content;
+        $output = is_string($content) ? $content : '';
 
         return new AgentExecutionResult($output, $totalTokens);
     }

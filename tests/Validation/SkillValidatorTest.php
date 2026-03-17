@@ -45,7 +45,7 @@ final class SkillValidatorTest extends TestCase
         (new Filesystem())->remove($this->tempDir);
     }
 
-    public function testValidateMinimalSkill()
+    public function testValidateMinimalSkill(): void
     {
         $skillDir = $this->createSkillFile("---\nname: my-skill\ndescription: A useful skill for testing purposes\n---\nDo something useful.");
 
@@ -57,7 +57,7 @@ final class SkillValidatorTest extends TestCase
         $this->assertSame([], $result->getErrors());
     }
 
-    public function testValidateShortDescriptionWarning()
+    public function testValidateShortDescriptionWarning(): void
     {
         $skillDir = $this->createSkillFile("---\nname: short-desc\ndescription: Short\n---\nBody content here.");
 
@@ -70,7 +70,7 @@ final class SkillValidatorTest extends TestCase
         $this->assertStringContainsString('short', $result->getWarnings()[0]);
     }
 
-    public function testValidateUnknownFrontmatterFieldWarning()
+    public function testValidateUnknownFrontmatterFieldWarning(): void
     {
         $skillDir = $this->createSkillFile("---\nname: my-skill\ndescription: A properly described skill here\nunknown-field: value\n---\nBody.");
 
@@ -83,7 +83,7 @@ final class SkillValidatorTest extends TestCase
         $this->assertStringContainsString('Unknown frontmatter field "unknown-field"', $result->getWarnings()[0]);
     }
 
-    public function testValidateEmptyBodyWarning()
+    public function testValidateEmptyBodyWarning(): void
     {
         $skillDir = $this->createSkillFile("---\nname: empty-body\ndescription: Skill with no body content at all\n---\n");
 
@@ -99,7 +99,7 @@ final class SkillValidatorTest extends TestCase
         $this->assertNotEmpty($bodyWarning);
     }
 
-    public function testValidateFileSystemAllOptionalFields()
+    public function testValidateFileSystemAllOptionalFields(): void
     {
         $content = <<<'MD'
             ---
@@ -130,7 +130,7 @@ final class SkillValidatorTest extends TestCase
         $this->assertSame([], $licenseWarnings);
     }
 
-    public function testValidateLicenseFieldIsRecognized()
+    public function testValidateLicenseFieldIsRecognized(): void
     {
         $skillDir = $this->createSkillFile("---\nname: license-skill\ndescription: A properly described skill for testing purposes\nlicense: MIT\n---\nBody.");
 
@@ -144,7 +144,7 @@ final class SkillValidatorTest extends TestCase
         $this->assertSame([], $licenseWarnings);
     }
 
-    public function testValidateDescriptionTooLong()
+    public function testValidateDescriptionTooLong(): void
     {
         $longDescription = str_repeat('a', 1025);
         $metadata = new SkillMetadata('my-skill', $longDescription);
@@ -156,7 +156,7 @@ final class SkillValidatorTest extends TestCase
         $this->assertStringContainsString('too long', $result->getErrors()[0]);
     }
 
-    public function testValidateDescriptionAtExactLimit()
+    public function testValidateDescriptionAtExactLimit(): void
     {
         $exactDescription = str_repeat('a', 1024);
         $metadata = new SkillMetadata('my-skill', $exactDescription);
@@ -167,7 +167,7 @@ final class SkillValidatorTest extends TestCase
         $this->assertTrue($result->isValid());
     }
 
-    public function testValidateCompatibilityTooLong()
+    public function testValidateCompatibilityTooLong(): void
     {
         $longCompatibility = str_repeat('a', 501);
         $metadata = new SkillMetadata('my-skill', 'A properly described skill for testing purposes', compatibility: $longCompatibility);
@@ -179,7 +179,7 @@ final class SkillValidatorTest extends TestCase
         $this->assertStringContainsString('compatibility', $result->getErrors()[0]);
     }
 
-    public function testValidateEmptyCompatibility()
+    public function testValidateEmptyCompatibility(): void
     {
         $metadata = new SkillMetadata('my-skill', 'A properly described skill for testing purposes', compatibility: '');
         $skill = new Skill('Body content.', $metadata);
@@ -191,7 +191,7 @@ final class SkillValidatorTest extends TestCase
         $this->assertStringContainsString('non-empty', $result->getErrors()[0]);
     }
 
-    public function testValidateSkillInterfaceWithShortDescription()
+    public function testValidateSkillInterfaceWithShortDescription(): void
     {
         $metadata = new SkillMetadata('my-skill', 'Short');
         $skill = new Skill('Body content.', $metadata);
@@ -203,7 +203,7 @@ final class SkillValidatorTest extends TestCase
         $this->assertStringContainsString('short', $result->getWarnings()[0]);
     }
 
-    public function testValidateSkillInterfaceWithEmptyBody()
+    public function testValidateSkillInterfaceWithEmptyBody(): void
     {
         $metadata = new SkillMetadata('my-skill', 'A properly described skill for testing purposes');
         $skill = new Skill('', $metadata);

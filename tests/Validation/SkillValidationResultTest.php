@@ -11,7 +11,7 @@ use PHPUnit\Framework\TestCase;
 
 final class SkillValidationResultTest extends TestCase
 {
-    public function testIsValidWithNoErrors()
+    public function testIsValidWithNoErrors(): void
     {
         $metadata = new SkillMetadata('my-skill', 'A skill');
         $skill = new Skill('This is the instruction body.', $metadata);
@@ -24,7 +24,7 @@ final class SkillValidationResultTest extends TestCase
         $this->assertFalse($result->hasWarnings());
     }
 
-    public function testIsNotValidWithErrors()
+    public function testIsNotValidWithErrors(): void
     {
         $metadata = new SkillMetadata('my-skill', 'A skill');
         $skill = new Skill('This is the instruction body.', $metadata);
@@ -35,7 +35,7 @@ final class SkillValidationResultTest extends TestCase
         $this->assertSame(['Missing name field.'], $result->getErrors());
     }
 
-    public function testIsValidWithWarningsOnly()
+    public function testIsValidWithWarningsOnly(): void
     {
         $metadata = new SkillMetadata('my-skill', 'A skill');
         $skill = new Skill('This is the instruction body.', $metadata);
@@ -47,7 +47,7 @@ final class SkillValidationResultTest extends TestCase
         $this->assertSame(['Description is short.'], $result->getWarnings());
     }
 
-    public function testMultipleErrorsAndWarnings()
+    public function testMultipleErrorsAndWarnings(): void
     {
         $metadata = new SkillMetadata('my-skill', 'A skill');
         $skill = new Skill('This is the instruction body.', $metadata);
@@ -59,7 +59,7 @@ final class SkillValidationResultTest extends TestCase
         $this->assertCount(1, $result->getWarnings());
     }
 
-    public function testGetSkillName()
+    public function testGetSkillName(): void
     {
         $metadata = new SkillMetadata('my-skill', 'A skill');
         $skill = new Skill('This is the instruction body.', $metadata);

@@ -32,7 +32,7 @@ final class ExecuteSkillScriptToolTest extends TestCase
         (new Filesystem())->remove($this->tempDir);
     }
 
-    public function testHandleExecutesPhpScript()
+    public function testHandleExecutesPhpScript(): void
     {
         $this->createSkillWithScript('script-skill', 'test.php', '<?php echo "Hello from PHP";');
 
@@ -45,7 +45,7 @@ final class ExecuteSkillScriptToolTest extends TestCase
         $this->assertStringContainsString('Hello from PHP', $result);
     }
 
-    public function testHandleReturnsErrorForMissingSkill()
+    public function testHandleReturnsErrorForMissingSkill(): void
     {
         $loader = new FilesystemSkillLoader([$this->tempDir], new SkillParser(), new SkillValidator());
         $tool = new ExecuteSkillScriptTool($loader, 'nonexistent');
@@ -55,7 +55,7 @@ final class ExecuteSkillScriptToolTest extends TestCase
         $this->assertStringContainsString('Skill "nonexistent" not found.', $result);
     }
 
-    public function testHandleReturnsErrorForMissingScript()
+    public function testHandleReturnsErrorForMissingScript(): void
     {
         $this->createSkill('no-script-skill', 'A skill without scripts', 'Body.');
 
@@ -67,7 +67,7 @@ final class ExecuteSkillScriptToolTest extends TestCase
         $this->assertStringContainsString('Error loading script "missing.sh"', $result);
     }
 
-    public function testHandleExecutesShellScript()
+    public function testHandleExecutesShellScript(): void
     {
         $this->createSkillWithScript('sh-skill', 'hello.sh', '#!/bin/bash' . "\n" . 'echo "Hello from Bash"');
         chmod($this->tempDir . '/sh-skill/scripts/hello.sh', 0o755);
@@ -80,7 +80,7 @@ final class ExecuteSkillScriptToolTest extends TestCase
         $this->assertStringContainsString('Hello from Bash', $result);
     }
 
-    public function testDescriptionIncludesSkillName()
+    public function testDescriptionIncludesSkillName(): void
     {
         $loader = new FilesystemSkillLoader([$this->tempDir], new SkillParser(), new SkillValidator());
         $tool = new ExecuteSkillScriptTool($loader, 'my-skill');

@@ -21,6 +21,7 @@ use AgentSkills\SkillParser;
 use AgentSkills\SkillParserInterface;
 use AgentSkills\Validation\SkillValidator;
 use AgentSkills\Validation\SkillValidatorInterface;
+use Override;
 use Symfony\AI\Agent\InputProcessorInterface;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -31,10 +32,16 @@ use Symfony\Component\String\UnicodeString;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 use function array_map;
+use function is_array;
+use function is_string;
 use function sprintf;
 
 final class AgentSkillBundleExtension extends Extension
 {
+    /**
+     * @param array<string, mixed> $config
+     */
+    #[Override]
     public function getConfiguration(array $config, ContainerBuilder $container): ConfigurationInterface
     {
         return new AgentSkillsBundleConfiguration();
@@ -154,22 +161,29 @@ final class AgentSkillBundleExtension extends Extension
         $this->registerEvaluationServices($config, $container, $effectiveLoaderId, $agentId);
     }
 
+    /**
+     * @param array<string, mixed> $config
+     */
     private function registerEvaluationServices(array $config, ContainerBuilder $container, string $effectiveLoaderId, ?string $agentId): void
     {
         $container->setDefinition('agent_skills.eval_suite_loader', new Definition(EvalSuiteLoader::class));
 
+        $evaluation = is_array($config['evaluation'] ?? null) ? $config['evaluation'] : [];
+
+        $workspace = is_string($evaluation['workspace'] ?? null) ? $evaluation['workspace'] : 'var/skill-evals';
+
         $container->setDefinition(
             'agent_skills.workspace_manager',
             (new Definition(WorkspaceManager::class))
-            ->setArguments([$config['evaluation']['workspace']]),
+            ->setArguments([$workspace]),
         );
 
         $container->setDefinition('agent_skills.benchmark_aggregator', new Definition(BenchmarkAggregator::class));
 
-        $gradingModel = $config['evaluation']['grading_model'] ?? null;
-        $gradingPlatform = $config['evaluation']['grading_platform'] ?? null;
+        $gradingModel = $evaluation['grading_model'] ?? null;
+        $gradingPlatform = $evaluation['grading_platform'] ?? null;
 
-        if (null !== $gradingModel && null !== $gradingPlatform) {
+        if (is_string($gradingModel) && is_string($gradingPlatform)) {
             $llmClientDefinition = (new Definition(SymfonyLlmClient::class))
                 ->setArguments([
                     new Reference($gradingPlatform),

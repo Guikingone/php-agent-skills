@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace AgentSkills\Evaluation;
 
 use function array_map;
+use function array_values;
 use function count;
 
 /**
@@ -12,13 +13,13 @@ use function count;
  *
  * @author Guillaume Loulier <contact@guillaumeloulier.fr>
  */
-final class GradingResult implements GradingResultInterface
+final readonly class GradingResult implements GradingResultInterface
 {
     /**
      * @param AssertionResult[] $assertionResults
      */
     public function __construct(
-        private readonly array $assertionResults,
+        private array $assertionResults,
     ) {
     }
 
@@ -49,10 +50,10 @@ final class GradingResult implements GradingResultInterface
     public function toArray(): array
     {
         return [
-            'assertion_results' => array_map(
+            'assertion_results' => array_values(array_map(
                 static fn (AssertionResult $r): array => $r->toArray(),
                 $this->assertionResults,
-            ),
+            )),
             'summary' => $this->getSummary(),
         ];
     }

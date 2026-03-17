@@ -10,7 +10,7 @@ use PHPUnit\Framework\TestCase;
 
 final class SkillMetadataTest extends TestCase
 {
-    public function testConstructorWithValidKebabCaseName()
+    public function testConstructorWithValidKebabCaseName(): void
     {
         $metadata = new SkillMetadata('my-skill', 'A useful skill');
 
@@ -18,21 +18,21 @@ final class SkillMetadataTest extends TestCase
         $this->assertSame('A useful skill', $metadata->getDescription());
     }
 
-    public function testConstructorWithSingleWordName()
+    public function testConstructorWithSingleWordName(): void
     {
         $metadata = new SkillMetadata('skill', 'A simple skill');
 
         $this->assertSame('skill', $metadata->getName());
     }
 
-    public function testConstructorWithMultiSegmentKebabCase()
+    public function testConstructorWithMultiSegmentKebabCase(): void
     {
         $metadata = new SkillMetadata('my-very-long-skill', 'A skill with many segments');
 
         $this->assertSame('my-very-long-skill', $metadata->getName());
     }
 
-    public function testConstructorThrowsOnEmptyName()
+    public function testConstructorThrowsOnEmptyName(): void
     {
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('must be non-empty kebab-case');
@@ -40,7 +40,7 @@ final class SkillMetadataTest extends TestCase
         new SkillMetadata('', 'A description');
     }
 
-    public function testConstructorThrowsOnUpperCaseName()
+    public function testConstructorThrowsOnUpperCaseName(): void
     {
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('must be non-empty kebab-case');
@@ -48,7 +48,7 @@ final class SkillMetadataTest extends TestCase
         new SkillMetadata('My-Skill', 'A description');
     }
 
-    public function testConstructorThrowsOnUnderscoreName()
+    public function testConstructorThrowsOnUnderscoreName(): void
     {
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('must be non-empty kebab-case');
@@ -56,7 +56,7 @@ final class SkillMetadataTest extends TestCase
         new SkillMetadata('my_skill', 'A description');
     }
 
-    public function testConstructorThrowsOnNameWithSpaces()
+    public function testConstructorThrowsOnNameWithSpaces(): void
     {
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('must be non-empty kebab-case');
@@ -64,7 +64,7 @@ final class SkillMetadataTest extends TestCase
         new SkillMetadata('my skill', 'A description');
     }
 
-    public function testConstructorThrowsOnTrailingDash()
+    public function testConstructorThrowsOnTrailingDash(): void
     {
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('must be non-empty kebab-case');
@@ -72,7 +72,7 @@ final class SkillMetadataTest extends TestCase
         new SkillMetadata('my-skill-', 'A description');
     }
 
-    public function testConstructorThrowsOnEmptyDescription()
+    public function testConstructorThrowsOnEmptyDescription(): void
     {
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Skill description must not be empty');
@@ -80,7 +80,7 @@ final class SkillMetadataTest extends TestCase
         new SkillMetadata('my-skill', '');
     }
 
-    public function testConstructorThrowsOnWhitespaceOnlyDescription()
+    public function testConstructorThrowsOnWhitespaceOnlyDescription(): void
     {
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Skill description must not be empty');
@@ -88,84 +88,84 @@ final class SkillMetadataTest extends TestCase
         new SkillMetadata('my-skill', '   ');
     }
 
-    public function testGetLicenseReturnsNullByDefault()
+    public function testGetLicenseReturnsNullByDefault(): void
     {
         $metadata = new SkillMetadata('my-skill', 'desc');
 
         $this->assertNull($metadata->getLicense());
     }
 
-    public function testGetLicenseReturnsSpdxIdentifier()
+    public function testGetLicenseReturnsSpdxIdentifier(): void
     {
         $metadata = new SkillMetadata('my-skill', 'desc', license: 'MIT');
 
         $this->assertSame('MIT', $metadata->getLicense());
     }
 
-    public function testGetAllowedToolsReturnsEmptyArrayByDefault()
+    public function testGetAllowedToolsReturnsEmptyArrayByDefault(): void
     {
         $metadata = new SkillMetadata('my-skill', 'desc');
 
         $this->assertSame([], $metadata->getAllowedTools());
     }
 
-    public function testGetAllowedToolsReturnsList()
+    public function testGetAllowedToolsReturnsList(): void
     {
         $metadata = new SkillMetadata('my-skill', 'desc', allowedTools: ['Read', 'Write', 'Bash']);
 
         $this->assertSame(['Read', 'Write', 'Bash'], $metadata->getAllowedTools());
     }
 
-    public function testGetCompatibilityReturnsNullByDefault()
+    public function testGetCompatibilityReturnsNullByDefault(): void
     {
         $metadata = new SkillMetadata('my-skill', 'desc');
 
         $this->assertNull($metadata->getCompatibility());
     }
 
-    public function testGetCompatibilityReturnsString()
+    public function testGetCompatibilityReturnsString(): void
     {
         $metadata = new SkillMetadata('my-skill', 'desc', compatibility: 'claude >=3.5');
 
         $this->assertSame('claude >=3.5', $metadata->getCompatibility());
     }
 
-    public function testGetMetadataReturnsEmptyArrayByDefault()
+    public function testGetMetadataReturnsEmptyArrayByDefault(): void
     {
         $metadata = new SkillMetadata('my-skill', 'desc');
 
         $this->assertSame([], $metadata->getMetadata());
     }
 
-    public function testGetAuthorReturnsNullWhenNotSet()
+    public function testGetAuthorReturnsNullWhenNotSet(): void
     {
         $metadata = new SkillMetadata('my-skill', 'desc');
 
         $this->assertNull($metadata->getAuthor());
     }
 
-    public function testGetAuthorReturnsValueFromMetadata()
+    public function testGetAuthorReturnsValueFromMetadata(): void
     {
         $metadata = new SkillMetadata('my-skill', 'desc', metadata: ['author' => 'Jane Doe']);
 
         $this->assertSame('Jane Doe', $metadata->getAuthor());
     }
 
-    public function testGetVersionReturnsNullWhenNotSet()
+    public function testGetVersionReturnsNullWhenNotSet(): void
     {
         $metadata = new SkillMetadata('my-skill', 'desc');
 
         $this->assertNull($metadata->getVersion());
     }
 
-    public function testGetVersionReturnsValueFromMetadata()
+    public function testGetVersionReturnsValueFromMetadata(): void
     {
         $metadata = new SkillMetadata('my-skill', 'desc', metadata: ['version' => '1.2.0']);
 
         $this->assertSame('1.2.0', $metadata->getVersion());
     }
 
-    public function testFullMetadata()
+    public function testFullMetadata(): void
     {
         $metadata = new SkillMetadata(
             name: 'pdf-processing',

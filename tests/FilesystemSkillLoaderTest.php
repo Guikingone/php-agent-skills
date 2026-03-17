@@ -33,21 +33,21 @@ final class FilesystemSkillLoaderTest extends TestCase
         $this->filesystem->remove($this->tempDir);
     }
 
-    public function testDiscoverMetadataReturnsEmptyWhenNoDirectories()
+    public function testDiscoverMetadataReturnsEmptyWhenNoDirectories(): void
     {
         $discovery = new FilesystemSkillLoader([]);
 
         $this->assertSame([], $discovery->discoverMetadata());
     }
 
-    public function testDiscoverMetadataReturnsEmptyWhenDirectoryDoesNotExist()
+    public function testDiscoverMetadataReturnsEmptyWhenDirectoryDoesNotExist(): void
     {
         $discovery = new FilesystemSkillLoader(['/non/existent/path']);
 
         $this->assertSame([], $discovery->discoverMetadata());
     }
 
-    public function testDiscoverMetadataReturnsEmptyWhenNoSkillsFound()
+    public function testDiscoverMetadataReturnsEmptyWhenNoSkillsFound(): void
     {
         $this->filesystem->mkdir($this->tempDir . '/not-a-skill');
         $this->filesystem->dumpFile($this->tempDir . '/not-a-skill/README.md', 'Not a skill');
@@ -57,7 +57,7 @@ final class FilesystemSkillLoaderTest extends TestCase
         $this->assertSame([], $discovery->discoverMetadata());
     }
 
-    public function testDiscoverMetadataFindsSkills()
+    public function testDiscoverMetadataFindsSkills(): void
     {
         $this->createSkillDirectory('code-review', 'Reviews code changes');
         $this->createSkillDirectory('pdf-reader', 'Reads PDF documents');
@@ -72,7 +72,7 @@ final class FilesystemSkillLoaderTest extends TestCase
         $this->assertSame('Reviews code changes', $metadata['code-review']->getDescription());
     }
 
-    public function testDiscoverMetadataSkipsInvalidSkills()
+    public function testDiscoverMetadataSkipsInvalidSkills(): void
     {
         $this->createSkillDirectory('valid-skill', 'A valid skill');
 
@@ -87,7 +87,7 @@ final class FilesystemSkillLoaderTest extends TestCase
         $this->assertArrayHasKey('valid-skill', $metadata);
     }
 
-    public function testDiscoverMetadataFromMultipleDirectories()
+    public function testDiscoverMetadataFromMultipleDirectories(): void
     {
         $dir1 = $this->tempDir . '/dir1';
         $dir2 = $this->tempDir . '/dir2';
@@ -104,7 +104,7 @@ final class FilesystemSkillLoaderTest extends TestCase
         $this->assertArrayHasKey('skill-b', $metadata);
     }
 
-    public function testLoadSkillReturnsSkillWhenFound()
+    public function testLoadSkillReturnsSkillWhenFound(): void
     {
         $this->createSkillDirectory('my-skill', 'My skill description');
 
@@ -116,7 +116,7 @@ final class FilesystemSkillLoaderTest extends TestCase
         $this->assertSame('My skill description', $skill->getDescription());
     }
 
-    public function testLoadSkillReturnsNullWhenNotFound()
+    public function testLoadSkillReturnsNullWhenNotFound(): void
     {
         $this->createSkillDirectory('other-skill', 'Some skill');
 
@@ -125,14 +125,14 @@ final class FilesystemSkillLoaderTest extends TestCase
         $this->assertNull($discovery->loadSkill('non-existent'));
     }
 
-    public function testLoadSkillReturnsNullFromEmptyDirectories()
+    public function testLoadSkillReturnsNullFromEmptyDirectories(): void
     {
         $discovery = new FilesystemSkillLoader([]);
 
         $this->assertNull($discovery->loadSkill('anything'));
     }
 
-    public function testLoadAllSkillsReturnsAllSkills()
+    public function testLoadAllSkillsReturnsAllSkills(): void
     {
         $this->createSkillDirectory('skill-one', 'First skill');
         $this->createSkillDirectory('skill-two', 'Second skill');
@@ -147,14 +147,14 @@ final class FilesystemSkillLoaderTest extends TestCase
         $this->assertInstanceOf(Skill::class, $skills['skill-two']);
     }
 
-    public function testLoadAllSkillsReturnsEmptyWhenNone()
+    public function testLoadAllSkillsReturnsEmptyWhenNone(): void
     {
         $discovery = new FilesystemSkillLoader([$this->tempDir]);
 
         $this->assertSame([], $discovery->loadSkills());
     }
 
-    public function testLoadAllSkillsSkipsInvalidOnes()
+    public function testLoadAllSkillsSkipsInvalidOnes(): void
     {
         $this->createSkillDirectory('good-skill', 'A good skill');
 
@@ -168,7 +168,7 @@ final class FilesystemSkillLoaderTest extends TestCase
         $this->assertArrayHasKey('good-skill', $skills);
     }
 
-    public function testSkipsFilesInBaseDirectory()
+    public function testSkipsFilesInBaseDirectory(): void
     {
         // A file directly in the base dir should be ignored
         $this->filesystem->dumpFile($this->tempDir . '/stray-file.txt', 'not a skill');

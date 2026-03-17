@@ -9,16 +9,16 @@ use AgentSkills\SkillInterface;
 /**
  * @author Guillaume Loulier <contact@guillaumeloulier.fr>
  */
-final class SkillValidationResult implements SkillValidationResultInterface
+final readonly class SkillValidationResult implements SkillValidationResultInterface
 {
     /**
      * @param string[] $errors Validation errors (spec violations)
      * @param string[] $warnings Validation warnings (best-practice recommendations)
      */
     public function __construct(
-        private readonly SkillInterface $skill,
-        private readonly array $errors = [],
-        private readonly array $warnings = [],
+        private SkillInterface $skill,
+        private array $errors = [],
+        private array $warnings = [],
     ) {
     }
 

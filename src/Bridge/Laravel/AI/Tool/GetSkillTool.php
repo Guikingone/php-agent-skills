@@ -11,16 +11,17 @@ use Laravel\Ai\Contracts\Tool;
 use Laravel\Ai\Tools\Request;
 use RuntimeException;
 
+use function is_string;
 use function sprintf;
 
 /**
  * @author Guillaume Loulier <contact@guillaumeloulier.fr>
  */
-final class GetSkillTool implements Tool
+final readonly class GetSkillTool implements Tool
 {
     public function __construct(
-        private readonly SkillLoaderInterface $loader,
-        private readonly string $skillName,
+        private SkillLoaderInterface $loader,
+        private string $skillName,
     ) {
     }
 
@@ -52,10 +53,12 @@ final class GetSkillTool implements Tool
         $output = sprintf("# Skill: %s\n\n%s", $skill->getName(), $skill->getBody());
 
         $reference = $request['reference'] ?? null;
-        if (null !== $reference) {
+        if (is_string($reference) && '' !== $reference) {
             try {
                 $referenceContent = $skill->loadReference($reference);
-                $output .= sprintf("\n\n## Reference: %s\n\n%s", $reference, $referenceContent);
+                if (is_string($referenceContent)) {
+                    $output .= sprintf("\n\n## Reference: %s\n\n%s", $reference, $referenceContent);
+                }
             } catch (RuntimeException $e) {
                 $output .= sprintf("\n\n> Reference \"%s\" could not be loaded: %s", $reference, $e->getMessage());
             }

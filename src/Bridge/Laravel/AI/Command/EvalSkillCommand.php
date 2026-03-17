@@ -19,6 +19,7 @@ use Symfony\Component\Clock\ClockInterface;
 use Throwable;
 
 use function count;
+use function is_string;
 use function mb_substr;
 use function sprintf;
 
@@ -56,6 +57,12 @@ final class EvalSkillCommand extends Command
         $iteration = (int) $this->option('iteration');
         $skipGrading = (bool) $this->option('skip-grading');
 
+        if (!is_string($skillDirectory) || '' === $skillDirectory) {
+            $this->error('The skill-directory argument is required.');
+
+            return self::FAILURE;
+        }
+
         try {
             $suite = $this->evalSuiteLoader->load($skillDirectory);
         } catch (Throwable $e) {
@@ -70,7 +77,7 @@ final class EvalSkillCommand extends Command
         $agentName = $this->option('agent');
         $baselineAgentName = $this->option('baseline-agent');
 
-        if (null === $agentName) {
+        if (!is_string($agentName) || '' === $agentName) {
             $this->error('The --agent option is required.');
 
             return self::FAILURE;
@@ -81,7 +88,7 @@ final class EvalSkillCommand extends Command
         $withSkillResults = $this->runEvals($suite, $agentName, $iteration, 'with_skill', $skipGrading);
 
         $withoutSkillResults = [];
-        if (null !== $baselineAgentName) {
+        if (is_string($baselineAgentName) && '' !== $baselineAgentName) {
             $withoutSkillResults = $this->runEvals($suite, $baselineAgentName, $iteration, 'without_skill', $skipGrading);
         }
 
@@ -130,7 +137,7 @@ final class EvalSkillCommand extends Command
             $this->workspaceManager->saveOutput($evalDir, $runResult->getOutput());
             $this->workspaceManager->saveTimingResult($evalDir, $runResult->getTiming());
 
-            if (!$skipGrading && null !== $this->grader && [] !== $evalCase->getAssertions()) {
+            if (!$skipGrading && $this->grader instanceof GraderInterface && [] !== $evalCase->getAssertions()) {
                 $grading = $this->grader->grade($runResult->getOutput(), $evalCase->getAssertions(), $evalCase->getExpectedOutput());
                 $runResult = $runResult->withGrading($grading);
                 $this->workspaceManager->saveGradingResult($evalDir, $grading);

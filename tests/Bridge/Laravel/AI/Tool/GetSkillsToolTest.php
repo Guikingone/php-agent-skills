@@ -31,7 +31,7 @@ final class GetSkillsToolTest extends TestCase
         (new Filesystem())->remove($this->tempDir);
     }
 
-    public function testHandleReturnsAllSkills()
+    public function testHandleReturnsAllSkills(): void
     {
         $this->createSkill('skill-one', 'First skill', 'First body.');
         $this->createSkill('skill-two', 'Second skill', 'Second body.');
@@ -47,7 +47,7 @@ final class GetSkillsToolTest extends TestCase
         $this->assertStringContainsString('Second body.', $result);
     }
 
-    public function testHandleReturnsMessageWhenNoSkills()
+    public function testHandleReturnsMessageWhenNoSkills(): void
     {
         $loader = new FilesystemSkillLoader([$this->tempDir], new SkillParser(), new SkillValidator());
         $tool = new GetSkillsTool($loader);
@@ -57,7 +57,7 @@ final class GetSkillsToolTest extends TestCase
         $this->assertSame('No skills available.', $result);
     }
 
-    public function testDescriptionReturnsExpectedString()
+    public function testDescriptionReturnsExpectedString(): void
     {
         $loader = new FilesystemSkillLoader([$this->tempDir], new SkillParser(), new SkillValidator());
         $tool = new GetSkillsTool($loader);

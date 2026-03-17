@@ -31,7 +31,7 @@ final class GetSkillToolTest extends TestCase
         (new Filesystem())->remove($this->tempDir);
     }
 
-    public function testHandleReturnsSkillContent()
+    public function testHandleReturnsSkillContent(): void
     {
         $this->createSkill('my-skill', 'A useful skill', 'Do something useful.');
 
@@ -44,7 +44,7 @@ final class GetSkillToolTest extends TestCase
         $this->assertStringContainsString('Do something useful.', $result);
     }
 
-    public function testHandleReturnsNotFoundForMissingSkill()
+    public function testHandleReturnsNotFoundForMissingSkill(): void
     {
         $loader = new FilesystemSkillLoader([$this->tempDir], new SkillParser(), new SkillValidator());
         $tool = new GetSkillTool($loader, 'nonexistent');
@@ -54,7 +54,7 @@ final class GetSkillToolTest extends TestCase
         $this->assertStringContainsString('Skill "nonexistent" not found.', $result);
     }
 
-    public function testHandleWithReferenceIncludesReferenceContent()
+    public function testHandleWithReferenceIncludesReferenceContent(): void
     {
         $this->createSkill('ref-skill', 'A skill with references', 'Body.');
 
@@ -71,7 +71,7 @@ final class GetSkillToolTest extends TestCase
         $this->assertStringContainsString('Reference content here', $result);
     }
 
-    public function testDescriptionIncludesSkillName()
+    public function testDescriptionIncludesSkillName(): void
     {
         $loader = new FilesystemSkillLoader([$this->tempDir], new SkillParser(), new SkillValidator());
         $tool = new GetSkillTool($loader, 'my-skill');

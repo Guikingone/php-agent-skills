@@ -13,7 +13,7 @@ use Symfony\Component\Clock\MockClock;
 
 final class EvalRunnerTest extends TestCase
 {
-    public function testRunSendsPromptAndCapturesTiming()
+    public function testRunSendsPromptAndCapturesTiming(): void
     {
         $executor = $this->createMock(AgentExecutorInterface::class);
         $executor->expects($this->once())
@@ -34,7 +34,7 @@ final class EvalRunnerTest extends TestCase
         $this->assertNull($runResult->getGrading());
     }
 
-    public function testRunExtractsTokenUsage()
+    public function testRunExtractsTokenUsage(): void
     {
         $executor = $this->createMock(AgentExecutorInterface::class);
         $executor->method('execute')

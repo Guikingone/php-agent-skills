@@ -9,7 +9,7 @@ namespace AgentSkills\Evaluation;
  *
  * @author Guillaume Loulier <contact@guillaumeloulier.fr>
  */
-final class EvalCase
+final readonly class EvalCase
 {
     /**
      * @param int $id Unique identifier within the eval suite
@@ -19,11 +19,11 @@ final class EvalCase
      * @param string[] $assertions Assertions to grade the output against
      */
     public function __construct(
-        private readonly int $id,
-        private readonly string $prompt,
-        private readonly string $expectedOutput,
-        private readonly array $files = [],
-        private readonly array $assertions = [],
+        private int $id,
+        private string $prompt,
+        private string $expectedOutput,
+        private array $files = [],
+        private array $assertions = [],
     ) {
     }
 

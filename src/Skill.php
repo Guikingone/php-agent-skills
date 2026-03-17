@@ -17,14 +17,14 @@ use Closure;
  *
  * @author Guillaume Loulier <contact@guillaumeloulier.fr>
  */
-final class Skill implements SkillInterface
+final readonly class Skill implements SkillInterface
 {
     public function __construct(
-        private readonly string $body,
-        private readonly SkillMetadataInterface $metadata,
-        private readonly ?Closure $scriptsLoader = null,
-        private readonly ?Closure $referencesLoader = null,
-        private readonly ?Closure $assetsLoader = null,
+        private string $body,
+        private SkillMetadataInterface $metadata,
+        private ?Closure $scriptsLoader = null,
+        private ?Closure $referencesLoader = null,
+        private ?Closure $assetsLoader = null,
     ) {
     }
 
@@ -57,16 +57,28 @@ final class Skill implements SkillInterface
      */
     public function loadScript(string $script): mixed
     {
+        if (!$this->scriptsLoader instanceof Closure) {
+            throw new RuntimeException('No scripts loader configured for this skill.');
+        }
+
         return ($this->scriptsLoader)($script);
     }
 
     public function loadReference(string $reference): mixed
     {
+        if (!$this->referencesLoader instanceof Closure) {
+            return null;
+        }
+
         return ($this->referencesLoader)($reference);
     }
 
     public function loadAsset(string $asset): mixed
     {
+        if (!$this->assetsLoader instanceof Closure) {
+            return null;
+        }
+
         return ($this->assetsLoader)($asset);
     }
 }

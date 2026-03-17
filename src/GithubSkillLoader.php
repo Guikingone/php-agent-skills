@@ -33,20 +33,20 @@ use function sprintf;
  *
  * @author Guillaume Loulier <contact@guillaumeloulier.fr>
  */
-final class GithubSkillLoader implements SkillLoaderInterface
+final readonly class GithubSkillLoader implements SkillLoaderInterface
 {
-    private const GITHUB_API_BASE = 'https://api.github.com';
-    private const GITHUB_RAW_BASE = 'https://raw.githubusercontent.com';
+    private const string GITHUB_API_BASE = 'https://api.github.com';
+    private const string GITHUB_RAW_BASE = 'https://raw.githubusercontent.com';
 
     /**
      * @param array<int, array{repository: string, path?: string, branch?: string, token?: string|null}> $repositories
      */
     public function __construct(
-        private readonly array $repositories,
-        private readonly HttpClientInterface $httpClient,
-        private readonly SkillParserInterface $parser = new SkillParser(),
-        private readonly SkillValidatorInterface $skillValidator = new SkillValidator(),
-        private readonly string $githubVersion = '2022-11-28',
+        private array $repositories,
+        private HttpClientInterface $httpClient,
+        private SkillParserInterface $parser = new SkillParser(),
+        private SkillValidatorInterface $skillValidator = new SkillValidator(),
+        private string $githubVersion = '2022-11-28',
     ) {
     }
 

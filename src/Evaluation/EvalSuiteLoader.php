@@ -8,6 +8,8 @@ use AgentSkills\Exception\InvalidArgumentException;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\String\UnicodeString;
 
+use function array_filter;
+use function array_values;
 use function is_array;
 use function is_int;
 use function is_string;
@@ -19,10 +21,10 @@ use function sprintf;
  *
  * @author Guillaume Loulier <contact@guillaumeloulier.fr>
  */
-final class EvalSuiteLoader implements EvalSuiteLoaderInterface
+final readonly class EvalSuiteLoader implements EvalSuiteLoaderInterface
 {
     public function __construct(
-        private readonly Filesystem $filesystem = new Filesystem(),
+        private Filesystem $filesystem = new Filesystem(),
     ) {
     }
 
@@ -69,12 +71,12 @@ final class EvalSuiteLoader implements EvalSuiteLoaderInterface
 
             $files = [];
             if (isset($evalData['files']) && is_array($evalData['files'])) {
-                $files = $evalData['files'];
+                $files = array_values(array_filter($evalData['files'], is_string(...)));
             }
 
             $assertions = [];
             if (isset($evalData['assertions']) && is_array($evalData['assertions'])) {
-                $assertions = $evalData['assertions'];
+                $assertions = array_values(array_filter($evalData['assertions'], is_string(...)));
             }
 
             $evals[] = new EvalCase($evalData['id'], $evalData['prompt'], $evalData['expected_output'], $files, $assertions);

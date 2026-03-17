@@ -13,9 +13,11 @@ use Symfony\Component\HttpClient\Response\MockResponse;
 
 use function json_encode;
 
+use const JSON_THROW_ON_ERROR;
+
 final class GithubSkillLoaderTest extends TestCase
 {
-    private const SKILL_CONTENT = <<<'MD'
+    private const string SKILL_CONTENT = <<<'MD'
         ---
         name: test-skill
         description: A test skill loaded from GitHub
@@ -23,7 +25,7 @@ final class GithubSkillLoaderTest extends TestCase
         Do something useful.
         MD;
 
-    public function testDiscoverMetadataListsSkillDirectories()
+    public function testDiscoverMetadataListsSkillDirectories(): void
     {
         $responses = [
             // List directory contents
@@ -31,7 +33,7 @@ final class GithubSkillLoaderTest extends TestCase
                 ['type' => 'dir', 'name' => 'test-skill'],
                 ['type' => 'dir', 'name' => 'other-skill'],
                 ['type' => 'file', 'name' => 'README.md'],
-            ])),
+            ], JSON_THROW_ON_ERROR)),
             // Fetch test-skill/SKILL.md
             new MockResponse(self::SKILL_CONTENT),
             // Fetch other-skill/SKILL.md
@@ -53,7 +55,7 @@ final class GithubSkillLoaderTest extends TestCase
         $this->assertSame('A test skill loaded from GitHub', $metadata['test-skill']->getDescription());
     }
 
-    public function testLoadSkillReturnsMatchingSkill()
+    public function testLoadSkillReturnsMatchingSkill(): void
     {
         $responses = [
             // Fetch test-skill/SKILL.md via raw URL
@@ -69,7 +71,7 @@ final class GithubSkillLoaderTest extends TestCase
         $this->assertSame('Do something useful.', $skill->getBody());
     }
 
-    public function testLoadSkillReturnsNullWhenNotFound()
+    public function testLoadSkillReturnsNullWhenNotFound(): void
     {
         $responses = [
             // 404 from GitHub
@@ -82,14 +84,14 @@ final class GithubSkillLoaderTest extends TestCase
         $this->assertNull($skill);
     }
 
-    public function testLoadSkillsReturnsAllValidSkills()
+    public function testLoadSkillsReturnsAllValidSkills(): void
     {
         $responses = [
             // List directory
             new MockResponse(json_encode([
                 ['type' => 'dir', 'name' => 'test-skill'],
                 ['type' => 'dir', 'name' => 'broken-skill'],
-            ])),
+            ], JSON_THROW_ON_ERROR)),
             // test-skill/SKILL.md
             new MockResponse(self::SKILL_CONTENT),
             // broken-skill/SKILL.md - malformed
@@ -103,7 +105,7 @@ final class GithubSkillLoaderTest extends TestCase
         $this->assertArrayHasKey('test-skill', $skills);
     }
 
-    public function testLoadSkillsReturnsEmptyWhenApiReturnsError()
+    public function testLoadSkillsReturnsEmptyWhenApiReturnsError(): void
     {
         $responses = [
             new MockResponse('Unauthorized', ['http_code' => 403]),
@@ -115,13 +117,13 @@ final class GithubSkillLoaderTest extends TestCase
         $this->assertSame([], $skills);
     }
 
-    public function testDiscoverMetadataSkipsInvalidSkills()
+    public function testDiscoverMetadataSkipsInvalidSkills(): void
     {
         $responses = [
             new MockResponse(json_encode([
                 ['type' => 'dir', 'name' => 'valid-skill'],
                 ['type' => 'dir', 'name' => 'broken'],
-            ])),
+            ], JSON_THROW_ON_ERROR)),
             // valid-skill/SKILL.md
             new MockResponse(self::SKILL_CONTENT),
             // broken/SKILL.md - 404
@@ -135,7 +137,7 @@ final class GithubSkillLoaderTest extends TestCase
         $this->assertArrayHasKey('test-skill', $metadata);
     }
 
-    public function testLoadSkillWithGithubUrl()
+    public function testLoadSkillWithGithubUrl(): void
     {
         $responses = [
             new MockResponse(self::SKILL_CONTENT),
@@ -148,7 +150,7 @@ final class GithubSkillLoaderTest extends TestCase
         $this->assertSame('test-skill', $skill->getName());
     }
 
-    public function testLoadSkillWithAuthentication()
+    public function testLoadSkillWithAuthentication(): void
     {
         $requestHeaders = [];
         $responses = [
@@ -176,7 +178,7 @@ final class GithubSkillLoaderTest extends TestCase
         $this->assertContains('Authorization: Bearer ghp_test_token', $requestHeaders);
     }
 
-    public function testLoadSkillWithCustomBranchAndPath()
+    public function testLoadSkillWithCustomBranchAndPath(): void
     {
         $capturedUrl = null;
         $httpClient = new MockHttpClient(static function (string $method, string $url) use (&$capturedUrl): MockResponse {
@@ -199,7 +201,7 @@ final class GithubSkillLoaderTest extends TestCase
         $this->assertStringContainsString('my-skills/test-skill/SKILL.md', $capturedUrl);
     }
 
-    public function testLoadReferenceFromGithub()
+    public function testLoadReferenceFromGithub(): void
     {
         $callIndex = 0;
         $httpClient = new MockHttpClient(static function () use (&$callIndex): MockResponse {
@@ -224,7 +226,7 @@ final class GithubSkillLoaderTest extends TestCase
         $this->assertSame('Reference content from GitHub', $skill->loadReference('guide.md'));
     }
 
-    public function testLoadAssetReturnsNullOn404()
+    public function testLoadAssetReturnsNullOn404(): void
     {
         $callIndex = 0;
         $httpClient = new MockHttpClient(static function () use (&$callIndex): MockResponse {
@@ -249,7 +251,7 @@ final class GithubSkillLoaderTest extends TestCase
         $this->assertNull($skill->loadAsset('missing.png'));
     }
 
-    public function testDiscoverMetadataFromMultipleRepositories()
+    public function testDiscoverMetadataFromMultipleRepositories(): void
     {
         $callIndex = 0;
         $httpClient = new MockHttpClient(static function () use (&$callIndex): MockResponse {
@@ -257,11 +259,11 @@ final class GithubSkillLoaderTest extends TestCase
 
             return match ($callIndex) {
                 // Repo 1: list dirs
-                1 => new MockResponse(json_encode([['type' => 'dir', 'name' => 'skill-a']])),
+                1 => new MockResponse(json_encode([['type' => 'dir', 'name' => 'skill-a']], JSON_THROW_ON_ERROR)),
                 // Repo 1: fetch skill-a/SKILL.md
                 2 => new MockResponse("---\nname: skill-a\ndescription: Skill from repo one\n---\nBody A."),
                 // Repo 2: list dirs
-                3 => new MockResponse(json_encode([['type' => 'dir', 'name' => 'skill-b']])),
+                3 => new MockResponse(json_encode([['type' => 'dir', 'name' => 'skill-b']], JSON_THROW_ON_ERROR)),
                 // Repo 2: fetch skill-b/SKILL.md
                 4 => new MockResponse("---\nname: skill-b\ndescription: Skill from repo two\n---\nBody B."),
                 default => new MockResponse('', ['http_code' => 404]),

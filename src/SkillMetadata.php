@@ -7,14 +7,16 @@ namespace AgentSkills;
 use AgentSkills\Exception\InvalidArgumentException;
 use Symfony\Component\String\UnicodeString;
 
+use function array_values;
+use function is_string;
 use function sprintf;
 
 /**
  * @author Guillaume Loulier <contact@guillaumeloulier.fr>
  */
-final class SkillMetadata implements SkillMetadataInterface
+final readonly class SkillMetadata implements SkillMetadataInterface
 {
-    private readonly string $name;
+    private string $name;
 
     /**
      * @param string $name Skill name (kebab-case, required)
@@ -27,12 +29,12 @@ final class SkillMetadata implements SkillMetadataInterface
      */
     public function __construct(
         string $name,
-        private readonly string $description,
-        private readonly ?string $license = null,
-        private readonly array $allowedTools = [],
-        private readonly ?string $compatibility = null,
-        private readonly array $metadata = [],
-        private readonly array $frontmatter = [],
+        private string $description,
+        private ?string $license = null,
+        private array $allowedTools = [],
+        private ?string $compatibility = null,
+        private array $metadata = [],
+        private array $frontmatter = [],
     ) {
         $unicodeName = new UnicodeString($name);
 
@@ -64,9 +66,12 @@ final class SkillMetadata implements SkillMetadataInterface
         return $this->license;
     }
 
+    /**
+     * @return list<string>
+     */
     public function getAllowedTools(): array
     {
-        return $this->allowedTools;
+        return array_values($this->allowedTools);
     }
 
     public function getCompatibility(): ?string
@@ -81,12 +86,16 @@ final class SkillMetadata implements SkillMetadataInterface
 
     public function getAuthor(): ?string
     {
-        return $this->metadata['author'] ?? null;
+        $author = $this->metadata['author'] ?? null;
+
+        return is_string($author) ? $author : null;
     }
 
     public function getVersion(): ?string
     {
-        return $this->metadata['version'] ?? null;
+        $version = $this->metadata['version'] ?? null;
+
+        return is_string($version) ? $version : null;
     }
 
     public function getFrontmatter(): array

@@ -9,11 +9,11 @@ namespace AgentSkills\Evaluation;
  *
  * @author Guillaume Loulier <contact@guillaumeloulier.fr>
  */
-final class TimingResult
+final readonly class TimingResult
 {
     public function __construct(
-        private readonly int $totalTokens,
-        private readonly int $durationMs,
+        private int $totalTokens,
+        private int $durationMs,
     ) {
     }
 

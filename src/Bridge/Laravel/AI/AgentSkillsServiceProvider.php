@@ -20,6 +20,7 @@ use AgentSkills\Evaluation\Grader\GraderInterface;
 use AgentSkills\Evaluation\Grader\LlmGrader;
 use AgentSkills\Evaluation\Workspace\WorkspaceManager;
 use AgentSkills\Evaluation\Workspace\WorkspaceManagerInterface;
+use AgentSkills\Exception\RuntimeException;
 use AgentSkills\FilesystemSkillLoader;
 use AgentSkills\GithubSkillLoader;
 use AgentSkills\SkillLoaderInterface;
@@ -27,17 +28,25 @@ use AgentSkills\SkillParser;
 use AgentSkills\SkillParserInterface;
 use AgentSkills\Validation\SkillValidator;
 use AgentSkills\Validation\SkillValidatorInterface;
+use Illuminate\Config\Repository;
+use Illuminate\Foundation\Application;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Ai\AiManager;
+use Override;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 use function dirname;
+use function is_string;
 
 /**
  * @author Guillaume Loulier <contact@guillaumeloulier.fr>
  */
 final class AgentSkillsServiceProvider extends ServiceProvider
 {
+    /** @var Application */
+    protected $app;
+
+    #[Override]
     public function register(): void
     {
         $this->mergeConfigFrom(
@@ -45,7 +54,7 @@ final class AgentSkillsServiceProvider extends ServiceProvider
             'agent-skills',
         );
 
-        if (!$this->app['config']->get('agent-skills.skills.enabled', false)) {
+        if (!$this->config()->get('agent-skills.skills.enabled', false)) {
             return;
         }
 
@@ -66,13 +75,13 @@ final class AgentSkillsServiceProvider extends ServiceProvider
             return;
         }
 
-        if (!$this->app['config']->get('agent-skills.skills.enabled', false)) {
+        if (!$this->config()->get('agent-skills.skills.enabled', false)) {
             return;
         }
 
         $commands = [ValidateSkillCommand::class];
 
-        if (null !== $this->app['config']->get('agent-skills.skills.agent')) {
+        if (null !== $this->config()->get('agent-skills.skills.agent')) {
             $commands[] = EvalSkillCommand::class;
         }
 
@@ -81,47 +90,37 @@ final class AgentSkillsServiceProvider extends ServiceProvider
 
     private function registerCoreServices(): void
     {
-        $this->app->singleton(SkillParserInterface::class, static function (): SkillParser {
-            return new SkillParser();
-        });
+        $this->app->singleton(SkillParserInterface::class, static fn (): SkillParser => new SkillParser());
 
-        $this->app->singleton(SkillValidatorInterface::class, static function (): SkillValidator {
-            return new SkillValidator();
-        });
+        $this->app->singleton(SkillValidatorInterface::class, static fn (): SkillValidator => new SkillValidator());
     }
 
     private function registerSkillLoaders(): void
     {
         /** @var array<int, string> $directories */
-        $directories = $this->app['config']->get('agent-skills.skills.directories', []);
+        $directories = $this->config()->get('agent-skills.skills.directories', []);
 
-        $this->app->singleton('agent_skills.filesystem_loader', static function ($app) use ($directories): FilesystemSkillLoader {
-            return new FilesystemSkillLoader(
-                $directories,
-                $app->make(SkillParserInterface::class),
-                $app->make(SkillValidatorInterface::class),
-            );
-        });
+        $this->app->singleton('agent_skills.filesystem_loader', static fn ($app): FilesystemSkillLoader => new FilesystemSkillLoader(
+            $directories,
+            $app->make(SkillParserInterface::class),
+            $app->make(SkillValidatorInterface::class),
+        ));
 
         /** @var array<int, array{repository: string, path?: string, branch?: string, token?: string|null}> $githubRepositories */
-        $githubRepositories = $this->app['config']->get('agent-skills.skills.github_repositories', []);
+        $githubRepositories = $this->config()->get('agent-skills.skills.github_repositories', []);
 
         if ([] !== $githubRepositories) {
-            $this->app->singleton('agent_skills.github_loader', static function ($app) use ($githubRepositories): GithubSkillLoader {
-                return new GithubSkillLoader(
-                    $githubRepositories,
-                    $app->make(HttpClientInterface::class),
-                    $app->make(SkillParserInterface::class),
-                    $app->make(SkillValidatorInterface::class),
-                );
-            });
+            $this->app->singleton('agent_skills.github_loader', static fn ($app): GithubSkillLoader => new GithubSkillLoader(
+                $githubRepositories,
+                $app->make(HttpClientInterface::class),
+                $app->make(SkillParserInterface::class),
+                $app->make(SkillValidatorInterface::class),
+            ));
 
-            $this->app->singleton(SkillLoaderInterface::class, static function ($app): ChainSkillLoader {
-                return new ChainSkillLoader([
-                    $app->make('agent_skills.filesystem_loader'),
-                    $app->make('agent_skills.github_loader'),
-                ]);
-            });
+            $this->app->singleton(SkillLoaderInterface::class, static fn ($app): ChainSkillLoader => new ChainSkillLoader([
+                $app->make('agent_skills.filesystem_loader'),
+                $app->make('agent_skills.github_loader'),
+            ]));
         } else {
             $this->app->alias('agent_skills.filesystem_loader', SkillLoaderInterface::class);
         }
@@ -130,59 +129,56 @@ final class AgentSkillsServiceProvider extends ServiceProvider
     private function registerMiddleware(): void
     {
         /** @var array<int, string> $activeSkills */
-        $activeSkills = $this->app['config']->get('agent-skills.skills.active_skills', []);
-        $includeIndex = (bool) $this->app['config']->get('agent-skills.skills.include_index', false);
+        $activeSkills = $this->config()->get('agent-skills.skills.active_skills', []);
+        $includeIndex = (bool) $this->config()->get('agent-skills.skills.include_index', false);
 
-        $this->app->singleton(SkillPromptMiddleware::class, static function ($app) use ($activeSkills, $includeIndex): SkillPromptMiddleware {
-            return new SkillPromptMiddleware(
-                $app->make(SkillLoaderInterface::class),
-                $activeSkills,
-                $includeIndex,
-            );
-        });
+        $this->app->singleton(SkillPromptMiddleware::class, static fn ($app): SkillPromptMiddleware => new SkillPromptMiddleware(
+            $app->make(SkillLoaderInterface::class),
+            $activeSkills,
+            $includeIndex,
+        ));
     }
 
     private function registerTools(): void
     {
         /** @var array<int, string> $activeSkills */
-        $activeSkills = $this->app['config']->get('agent-skills.skills.active_skills', []);
+        $activeSkills = $this->config()->get('agent-skills.skills.active_skills', []);
 
-        $this->app->singleton(GetSkillsTool::class, static function ($app): GetSkillsTool {
-            return new GetSkillsTool($app->make(SkillLoaderInterface::class));
-        });
+        $this->app->singleton(GetSkillsTool::class, static fn ($app): GetSkillsTool => new GetSkillsTool($app->make(SkillLoaderInterface::class)));
 
         foreach ($activeSkills as $skillName) {
-            $this->app->singleton('agent_skills.tool.get_skill.' . $skillName, static function ($app) use ($skillName): GetSkillTool {
-                return new GetSkillTool($app->make(SkillLoaderInterface::class), $skillName);
-            });
+            $this->app->singleton('agent_skills.tool.get_skill.' . $skillName, static fn ($app): GetSkillTool => new GetSkillTool($app->make(SkillLoaderInterface::class), $skillName));
 
-            $this->app->singleton('agent_skills.tool.execute_script.' . $skillName, static function ($app) use ($skillName): ExecuteSkillScriptTool {
-                return new ExecuteSkillScriptTool($app->make(SkillLoaderInterface::class), $skillName);
-            });
+            $this->app->singleton('agent_skills.tool.execute_script.' . $skillName, static fn ($app): ExecuteSkillScriptTool => new ExecuteSkillScriptTool($app->make(SkillLoaderInterface::class), $skillName));
         }
+    }
+
+    private function config(): Repository
+    {
+        $config = $this->app['config'];
+
+        if (!$config instanceof Repository) {
+            throw new RuntimeException('Config repository not available.');
+        }
+
+        return $config;
     }
 
     private function registerEvaluationServices(): void
     {
-        $this->app->singleton(EvalSuiteLoaderInterface::class, static function (): EvalSuiteLoader {
-            return new EvalSuiteLoader();
-        });
+        $this->app->singleton(EvalSuiteLoaderInterface::class, static fn (): EvalSuiteLoader => new EvalSuiteLoader());
 
         /** @var string $workspace */
-        $workspace = $this->app['config']->get('agent-skills.evaluation.workspace', 'storage/app/skill-evals');
+        $workspace = $this->config()->get('agent-skills.evaluation.workspace', 'storage/app/skill-evals');
 
-        $this->app->singleton(WorkspaceManagerInterface::class, static function () use ($workspace): WorkspaceManager {
-            return new WorkspaceManager($workspace);
-        });
+        $this->app->singleton(WorkspaceManagerInterface::class, static fn (): WorkspaceManager => new WorkspaceManager($workspace));
 
-        $this->app->singleton(BenchmarkAggregatorInterface::class, static function (): BenchmarkAggregator {
-            return new BenchmarkAggregator();
-        });
+        $this->app->singleton(BenchmarkAggregatorInterface::class, static fn (): BenchmarkAggregator => new BenchmarkAggregator());
 
-        $gradingModel = $this->app['config']->get('agent-skills.evaluation.grading_model');
-        $gradingProvider = $this->app['config']->get('agent-skills.evaluation.grading_provider');
+        $gradingModel = $this->config()->get('agent-skills.evaluation.grading_model');
+        $gradingProvider = $this->config()->get('agent-skills.evaluation.grading_provider');
 
-        if (null !== $gradingModel && null !== $gradingProvider) {
+        if (is_string($gradingModel) && is_string($gradingProvider)) {
             $this->app->singleton(GraderInterface::class, static function ($app) use ($gradingModel, $gradingProvider): LlmGrader {
                 $llmClient = new LaravelLlmClient(
                     $app->make(AiManager::class),

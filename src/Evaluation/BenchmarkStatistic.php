@@ -9,11 +9,11 @@ namespace AgentSkills\Evaluation;
  *
  * @author Guillaume Loulier <contact@guillaumeloulier.fr>
  */
-final class BenchmarkStatistic
+final readonly class BenchmarkStatistic
 {
     public function __construct(
-        private readonly float $mean,
-        private readonly float $stddev,
+        private float $mean,
+        private float $stddev,
     ) {
     }
 
