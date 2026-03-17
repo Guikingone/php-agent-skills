@@ -17,10 +17,10 @@ use function sprintf;
  *
  * @author Guillaume Loulier <contact@guillaumeloulier.fr>
  */
-final class LlmGrader implements GraderInterface
+final readonly class LlmGrader implements GraderInterface
 {
     public function __construct(
-        private readonly LlmClientInterface $client,
+        private LlmClientInterface $client,
     ) {
     }
 

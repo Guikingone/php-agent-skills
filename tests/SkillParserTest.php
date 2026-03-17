@@ -43,7 +43,7 @@ final class SkillParserTest extends TestCase
         (new Filesystem())->remove($this->tempDir);
     }
 
-    public function testEmptyNameField()
+    public function testEmptyNameField(): void
     {
         $this->createSkillFile("---\nname: \"\"\ndescription: A skill with empty name\n---\nBody.");
 
@@ -53,7 +53,7 @@ final class SkillParserTest extends TestCase
         (new SkillParser())->parse($this->tempDir);
     }
 
-    public function testInvalidKebabCaseName()
+    public function testInvalidKebabCaseName(): void
     {
         $this->createSkillFile("---\nname: My_Skill\ndescription: A skill with bad name format\n---\nBody.");
 
@@ -63,7 +63,7 @@ final class SkillParserTest extends TestCase
         (new SkillParser())->parse($this->tempDir);
     }
 
-    public function testParseMinimalSkill()
+    public function testParseMinimalSkill(): void
     {
         $skillDir = $this->createSkillFile(<<<'MD'
             ---
@@ -81,7 +81,7 @@ final class SkillParserTest extends TestCase
         $this->assertSame('Do something useful.', $skill->getBody());
     }
 
-    public function testParseSkillWithAllFrontmatterFields()
+    public function testParseSkillWithAllFrontmatterFields(): void
     {
         $skillDir = $this->createSkillFile(<<<'MD'
             ---
@@ -113,7 +113,7 @@ final class SkillParserTest extends TestCase
         $this->assertStringContainsString('Extract text from PDF files.', $skill->getBody());
     }
 
-    public function testParseSkillWithEmptyBody()
+    public function testParseSkillWithEmptyBody(): void
     {
         $skillDir = $this->createSkillFile(<<<'MD'
             ---
@@ -128,7 +128,7 @@ final class SkillParserTest extends TestCase
         $this->assertSame('', $skill->getBody());
     }
 
-    public function testParseSkillWithMultilineBody()
+    public function testParseSkillWithMultilineBody(): void
     {
         $skillDir = $this->createSkillFile(<<<'MD'
             ---
@@ -151,7 +151,7 @@ final class SkillParserTest extends TestCase
         $this->assertStringContainsString('Provide feedback.', $skill->getBody());
     }
 
-    public function testParseThrowsWhenSkillMdIsMissing()
+    public function testParseThrowsWhenSkillMdIsMissing(): void
     {
         $emptyDir = $this->tempDir . '/empty';
         (new Filesystem())->mkdir($emptyDir);
@@ -162,7 +162,7 @@ final class SkillParserTest extends TestCase
         (new SkillParser())->parse($emptyDir);
     }
 
-    public function testParseThrowsWhenNoFrontmatter()
+    public function testParseThrowsWhenNoFrontmatter(): void
     {
         $this->createSkillFile('Just some markdown without frontmatter.');
 
@@ -172,7 +172,7 @@ final class SkillParserTest extends TestCase
         (new SkillParser())->parse($this->tempDir);
     }
 
-    public function testParseThrowsWhenFrontmatterNotClosed()
+    public function testParseThrowsWhenFrontmatterNotClosed(): void
     {
         $skillDir = $this->createSkillFile(<<<'MD'
             ---
@@ -186,7 +186,7 @@ final class SkillParserTest extends TestCase
         (new SkillParser())->parse($skillDir);
     }
 
-    public function testParseThrowsWhenMissingName()
+    public function testParseThrowsWhenMissingName(): void
     {
         $this->createSkillFile(<<<'MD'
             ---
@@ -201,7 +201,7 @@ final class SkillParserTest extends TestCase
         (new SkillParser())->parse($this->tempDir);
     }
 
-    public function testParseThrowsWhenMissingDescription()
+    public function testParseThrowsWhenMissingDescription(): void
     {
         $skillDir = $this->createSkillFile(<<<'MD'
             ---
@@ -216,7 +216,7 @@ final class SkillParserTest extends TestCase
         (new SkillParser())->parse($skillDir);
     }
 
-    public function testParseMetadataOnlyReturnsSkillMetadata()
+    public function testParseMetadataOnlyReturnsSkillMetadata(): void
     {
         $skillDir = $this->createSkillFile(<<<'MD'
             ---
@@ -235,7 +235,7 @@ final class SkillParserTest extends TestCase
         $this->assertSame('Apache-2.0', $metadata->getLicense());
     }
 
-    public function testParseMetadataOnlyThrowsWhenMissing()
+    public function testParseMetadataOnlyThrowsWhenMissing(): void
     {
         $emptyDir = $this->tempDir . '/empty';
         (new Filesystem())->mkdir($emptyDir);
@@ -246,7 +246,7 @@ final class SkillParserTest extends TestCase
         (new SkillParser())->parseMetadataOnly($emptyDir);
     }
 
-    public function testParseSkillWithQuotedValues()
+    public function testParseSkillWithQuotedValues(): void
     {
         $skillDir = $this->createSkillFile(<<<'MD'
             ---
@@ -264,7 +264,7 @@ final class SkillParserTest extends TestCase
         $this->assertSame('MIT', $skill->getMetadata()->getLicense());
     }
 
-    public function testParseSkillWithComments()
+    public function testParseSkillWithComments(): void
     {
         $skillDir = $this->createSkillFile(<<<'MD'
             ---
@@ -280,7 +280,7 @@ final class SkillParserTest extends TestCase
         $this->assertSame('commented', $skill->getName());
     }
 
-    public function testParseSkillWithAllowedToolsSingleTool()
+    public function testParseSkillWithAllowedToolsSingleTool(): void
     {
         $skillDir = $this->createSkillFile(<<<'MD'
             ---
@@ -296,7 +296,7 @@ final class SkillParserTest extends TestCase
         $this->assertSame(['Read'], $skill->getMetadata()->getAllowedTools());
     }
 
-    public function testParseThrowsWhenNameDoesNotMatchDirectory()
+    public function testParseThrowsWhenNameDoesNotMatchDirectory(): void
     {
         $mismatchDir = $this->tempDir . '/wrong-name';
         (new Filesystem())->mkdir($mismatchDir);
@@ -308,7 +308,7 @@ final class SkillParserTest extends TestCase
         (new SkillParser())->parse($mismatchDir);
     }
 
-    public function testParseFromContentReturnsSkill()
+    public function testParseFromContentReturnsSkill(): void
     {
         $content = "---\nname: remote-skill\ndescription: A skill parsed from content\n---\nRemote instructions.";
 
@@ -319,7 +319,7 @@ final class SkillParserTest extends TestCase
         $this->assertSame('Remote instructions.', $skill->getBody());
     }
 
-    public function testParseFromContentWithCustomLoaders()
+    public function testParseFromContentWithCustomLoaders(): void
     {
         $content = "---\nname: remote-skill\ndescription: A skill with remote resources\n---\nBody.";
 
@@ -336,7 +336,7 @@ final class SkillParserTest extends TestCase
         $this->assertSame('Asset: logo.png', $skill->loadAsset('logo.png'));
     }
 
-    public function testParseMetadataFromContentReturnsMetadata()
+    public function testParseMetadataFromContentReturnsMetadata(): void
     {
         $content = "---\nname: remote-skill\ndescription: Metadata only\nlicense: MIT\n---\nBody is ignored for metadata.";
 
@@ -347,7 +347,7 @@ final class SkillParserTest extends TestCase
         $this->assertSame('MIT', $metadata->getLicense());
     }
 
-    public function testLoadReferenceBuildsCorrectPath()
+    public function testLoadReferenceBuildsCorrectPath(): void
     {
         $skillDir = $this->createSkillFile(<<<'MD'
             ---
@@ -365,7 +365,7 @@ final class SkillParserTest extends TestCase
         $this->assertSame('Reference content', $skill->loadReference('guide.md'));
     }
 
-    public function testLoadAssetBuildsCorrectPath()
+    public function testLoadAssetBuildsCorrectPath(): void
     {
         $skillDir = $this->createSkillFile(<<<'MD'
             ---

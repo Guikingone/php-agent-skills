@@ -33,7 +33,7 @@ final class WorkspaceManagerTest extends TestCase
         (new Filesystem())->remove($this->tempDir);
     }
 
-    public function testInitializeIteration()
+    public function testInitializeIteration(): void
     {
         $manager = new WorkspaceManager($this->tempDir);
         $dir = $manager->initializeIteration(1);
@@ -42,7 +42,7 @@ final class WorkspaceManagerTest extends TestCase
         $this->assertDirectoryExists($dir);
     }
 
-    public function testGetEvalDirectory()
+    public function testGetEvalDirectory(): void
     {
         $manager = new WorkspaceManager($this->tempDir);
         $dir = $manager->getEvalDirectory(1, 'test-eval', 'with_skill');
@@ -51,19 +51,19 @@ final class WorkspaceManagerTest extends TestCase
         $this->assertDirectoryExists($dir . '/outputs');
     }
 
-    public function testSaveTimingResult()
+    public function testSaveTimingResult(): void
     {
         $manager = new WorkspaceManager($this->tempDir);
         $evalDir = $manager->getEvalDirectory(1, 'test', 'with_skill');
 
         $manager->saveTimingResult($evalDir, new TimingResult(100, 500));
 
-        $content = json_decode(file_get_contents($evalDir . '/timing.json'), true);
+        $content = json_decode((string) file_get_contents($evalDir . '/timing.json'), true);
         $this->assertSame(100, $content['total_tokens']);
         $this->assertSame(500, $content['duration_ms']);
     }
 
-    public function testSaveGradingResult()
+    public function testSaveGradingResult(): void
     {
         $manager = new WorkspaceManager($this->tempDir);
         $evalDir = $manager->getEvalDirectory(1, 'test', 'with_skill');
@@ -71,12 +71,12 @@ final class WorkspaceManagerTest extends TestCase
         $grading = new GradingResult([new AssertionResult('test', true, 'evidence')]);
         $manager->saveGradingResult($evalDir, $grading);
 
-        $content = json_decode(file_get_contents($evalDir . '/grading.json'), true);
+        $content = json_decode((string) file_get_contents($evalDir . '/grading.json'), true);
         $this->assertCount(1, $content['assertion_results']);
         $this->assertTrue($content['assertion_results'][0]['passed']);
     }
 
-    public function testSaveBenchmarkResult()
+    public function testSaveBenchmarkResult(): void
     {
         $manager = new WorkspaceManager($this->tempDir);
         $manager->initializeIteration(1);
@@ -92,14 +92,14 @@ final class WorkspaceManagerTest extends TestCase
 
         $manager->saveBenchmarkResult(1, $benchmark);
 
-        $content = json_decode(file_get_contents($this->tempDir . '/iteration-1/benchmark.json'), true);
+        $content = json_decode((string) file_get_contents($this->tempDir . '/iteration-1/benchmark.json'), true);
         $this->assertArrayHasKey('run_summary', $content);
         $this->assertArrayHasKey('with_skill', $content['run_summary']);
         $this->assertArrayHasKey('without_skill', $content['run_summary']);
         $this->assertArrayHasKey('delta', $content['run_summary']);
     }
 
-    public function testSaveOutput()
+    public function testSaveOutput(): void
     {
         $manager = new WorkspaceManager($this->tempDir);
         $evalDir = $manager->getEvalDirectory(1, 'test', 'with_skill');

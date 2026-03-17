@@ -9,7 +9,7 @@ use PHPUnit\Framework\TestCase;
 
 final class EvalCaseTest extends TestCase
 {
-    public function testConstructionWithRequiredFields()
+    public function testConstructionWithRequiredFields(): void
     {
         $evalCase = new EvalCase(1, 'What is PHP?', 'PHP is a programming language.');
 
@@ -20,7 +20,7 @@ final class EvalCaseTest extends TestCase
         $this->assertSame([], $evalCase->getAssertions());
     }
 
-    public function testConstructionWithAllFields()
+    public function testConstructionWithAllFields(): void
     {
         $files = ['src/main.php', 'config.yaml'];
         $assertions = ['Output mentions PHP', 'Output is concise'];

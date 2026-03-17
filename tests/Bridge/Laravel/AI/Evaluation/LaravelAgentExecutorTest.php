@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace AgentSkills\Tests\Bridge\Laravel\AI\Evaluation;
 
 use AgentSkills\Bridge\Laravel\AI\Evaluation\LaravelAgentExecutor;
-use AgentSkills\Evaluation\Runner\AgentExecutionResult;
 use Laravel\Ai\Contracts\Agent;
 use Laravel\Ai\Responses\AgentResponse;
 use Laravel\Ai\Responses\Data\Meta;
@@ -14,7 +13,7 @@ use PHPUnit\Framework\TestCase;
 
 final class LaravelAgentExecutorTest extends TestCase
 {
-    public function testExecuteReturnsOutputAndTokens()
+    public function testExecuteReturnsOutputAndTokens(): void
     {
         $usage = new Usage(promptTokens: 100, completionTokens: 50);
         $response = new AgentResponse('test-invocation', 'Agent output text', $usage, new Meta());
@@ -28,12 +27,11 @@ final class LaravelAgentExecutorTest extends TestCase
         $executor = new LaravelAgentExecutor($agent);
         $result = $executor->execute('What is PHP?');
 
-        $this->assertInstanceOf(AgentExecutionResult::class, $result);
         $this->assertSame('Agent output text', $result->getOutput());
         $this->assertSame(150, $result->getTotalTokens());
     }
 
-    public function testExecuteWithZeroTokens()
+    public function testExecuteWithZeroTokens(): void
     {
         $usage = new Usage();
         $response = new AgentResponse('test-invocation', 'Some output', $usage, new Meta());

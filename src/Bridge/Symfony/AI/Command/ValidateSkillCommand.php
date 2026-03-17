@@ -56,7 +56,7 @@ final class ValidateSkillCommand extends Command
     {
         $skill = $this->skillLoader->loadSkill($skillName);
 
-        if (null === $skill) {
+        if (!$skill instanceof SkillInterface) {
             $io->error(sprintf('Skill "%s" not found.', $skillName));
 
             return Command::FAILURE;

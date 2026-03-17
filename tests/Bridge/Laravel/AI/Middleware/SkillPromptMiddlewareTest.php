@@ -33,7 +33,7 @@ final class SkillPromptMiddlewareTest extends TestCase
         (new Filesystem())->remove($this->tempDir);
     }
 
-    public function testMiddlewareDoesNothingWhenNoSkills()
+    public function testMiddlewareDoesNothingWhenNoSkills(): void
     {
         $loader = new FilesystemSkillLoader([$this->tempDir], new SkillParser(), new SkillValidator());
         $middleware = new SkillPromptMiddleware($loader, [], false);
@@ -41,16 +41,17 @@ final class SkillPromptMiddlewareTest extends TestCase
         $prompt = $this->createPrompt('Original prompt');
         $passedPrompt = null;
 
-        $middleware->handle($prompt, static function (AgentPrompt $p) use (&$passedPrompt) {
+        $middleware->handle($prompt, static function (AgentPrompt $p) use (&$passedPrompt): string {
             $passedPrompt = $p;
 
             return 'result';
         });
 
+        $this->assertNotNull($passedPrompt);
         $this->assertSame('Original prompt', $passedPrompt->prompt);
     }
 
-    public function testMiddlewareIncludesSkillIndex()
+    public function testMiddlewareIncludesSkillIndex(): void
     {
         $this->createSkill('test-skill', 'A test skill for indexing');
 
@@ -60,18 +61,19 @@ final class SkillPromptMiddlewareTest extends TestCase
         $prompt = $this->createPrompt('User question');
         $passedPrompt = null;
 
-        $middleware->handle($prompt, static function (AgentPrompt $p) use (&$passedPrompt) {
+        $middleware->handle($prompt, static function (AgentPrompt $p) use (&$passedPrompt): string {
             $passedPrompt = $p;
 
             return 'result';
         });
 
+        $this->assertNotNull($passedPrompt);
         $this->assertStringContainsString('## Available Skills', $passedPrompt->prompt);
         $this->assertStringContainsString('test-skill', $passedPrompt->prompt);
         $this->assertStringContainsString('A test skill for indexing', $passedPrompt->prompt);
     }
 
-    public function testMiddlewareSkipsIndexWhenDisabled()
+    public function testMiddlewareSkipsIndexWhenDisabled(): void
     {
         $this->createSkill('indexed-skill', 'Should not appear in index');
 
@@ -81,17 +83,18 @@ final class SkillPromptMiddlewareTest extends TestCase
         $prompt = $this->createPrompt('User question');
         $passedPrompt = null;
 
-        $middleware->handle($prompt, static function (AgentPrompt $p) use (&$passedPrompt) {
+        $middleware->handle($prompt, static function (AgentPrompt $p) use (&$passedPrompt): string {
             $passedPrompt = $p;
 
             return 'result';
         });
 
+        $this->assertNotNull($passedPrompt);
         $this->assertStringNotContainsString('## Available Skills', $passedPrompt->prompt);
         $this->assertStringContainsString('## Skill: indexed-skill', $passedPrompt->prompt);
     }
 
-    public function testMiddlewareLoadsActiveSkillsFully()
+    public function testMiddlewareLoadsActiveSkillsFully(): void
     {
         $this->createSkill('active-skill', 'An active skill', 'Full body content here.');
 
@@ -101,17 +104,18 @@ final class SkillPromptMiddlewareTest extends TestCase
         $prompt = $this->createPrompt('User question');
         $passedPrompt = null;
 
-        $middleware->handle($prompt, static function (AgentPrompt $p) use (&$passedPrompt) {
+        $middleware->handle($prompt, static function (AgentPrompt $p) use (&$passedPrompt): string {
             $passedPrompt = $p;
 
             return 'result';
         });
 
+        $this->assertNotNull($passedPrompt);
         $this->assertStringContainsString('## Skill: active-skill', $passedPrompt->prompt);
         $this->assertStringContainsString('Full body content here.', $passedPrompt->prompt);
     }
 
-    public function testMiddlewareIgnoresMissingActiveSkills()
+    public function testMiddlewareIgnoresMissingActiveSkills(): void
     {
         $loader = new FilesystemSkillLoader([$this->tempDir], new SkillParser(), new SkillValidator());
         $middleware = new SkillPromptMiddleware($loader, ['nonexistent-skill'], false);
@@ -119,16 +123,17 @@ final class SkillPromptMiddlewareTest extends TestCase
         $prompt = $this->createPrompt('User question');
         $passedPrompt = null;
 
-        $middleware->handle($prompt, static function (AgentPrompt $p) use (&$passedPrompt) {
+        $middleware->handle($prompt, static function (AgentPrompt $p) use (&$passedPrompt): string {
             $passedPrompt = $p;
 
             return 'result';
         });
 
+        $this->assertNotNull($passedPrompt);
         $this->assertSame('User question', $passedPrompt->prompt);
     }
 
-    public function testMiddlewareCombinesIndexAndActiveSkills()
+    public function testMiddlewareCombinesIndexAndActiveSkills(): void
     {
         $this->createSkill('index-skill', 'Appears in index');
         $this->createSkill('active-skill', 'Loaded fully', 'Active body.');
@@ -139,12 +144,13 @@ final class SkillPromptMiddlewareTest extends TestCase
         $prompt = $this->createPrompt('User question');
         $passedPrompt = null;
 
-        $middleware->handle($prompt, static function (AgentPrompt $p) use (&$passedPrompt) {
+        $middleware->handle($prompt, static function (AgentPrompt $p) use (&$passedPrompt): string {
             $passedPrompt = $p;
 
             return 'result';
         });
 
+        $this->assertNotNull($passedPrompt);
         $this->assertStringContainsString('## Available Skills', $passedPrompt->prompt);
         $this->assertStringContainsString('## Skill: active-skill', $passedPrompt->prompt);
         $this->assertStringContainsString('Active body.', $passedPrompt->prompt);

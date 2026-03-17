@@ -11,7 +11,7 @@ use PHPUnit\Framework\TestCase;
 
 final class LlmGraderTest extends TestCase
 {
-    public function testGradePassingAssertion()
+    public function testGradePassingAssertion(): void
     {
         $client = $this->createMock(LlmClientInterface::class);
         $client->expects($this->once())
@@ -26,7 +26,7 @@ final class LlmGraderTest extends TestCase
         $this->assertSame('Output mentions PHP correctly', $result->getAssertionResults()[0]->getEvidence());
     }
 
-    public function testGradeFailingAssertion()
+    public function testGradeFailingAssertion(): void
     {
         $client = $this->createMock(LlmClientInterface::class);
         $client->expects($this->once())
@@ -40,7 +40,7 @@ final class LlmGraderTest extends TestCase
         $this->assertFalse($result->getAssertionResults()[0]->isPassed());
     }
 
-    public function testGradeMultipleAssertions()
+    public function testGradeMultipleAssertions(): void
     {
         $client = $this->createMock(LlmClientInterface::class);
         $client->expects($this->exactly(2))
@@ -60,7 +60,7 @@ final class LlmGraderTest extends TestCase
         $this->assertSame(0.5, $summary['pass_rate']);
     }
 
-    public function testGradeThrowsOnMalformedResponse()
+    public function testGradeThrowsOnMalformedResponse(): void
     {
         $client = $this->createMock(LlmClientInterface::class);
         $client->expects($this->once())

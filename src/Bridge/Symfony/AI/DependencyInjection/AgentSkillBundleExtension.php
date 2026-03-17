@@ -21,6 +21,7 @@ use AgentSkills\SkillParser;
 use AgentSkills\SkillParserInterface;
 use AgentSkills\Validation\SkillValidator;
 use AgentSkills\Validation\SkillValidatorInterface;
+use Override;
 use Symfony\AI\Agent\InputProcessorInterface;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -35,6 +36,10 @@ use function sprintf;
 
 final class AgentSkillBundleExtension extends Extension
 {
+    /**
+     * @param array<string, mixed> $config
+     */
+    #[Override]
     public function getConfiguration(array $config, ContainerBuilder $container): ConfigurationInterface
     {
         return new AgentSkillsBundleConfiguration();
@@ -154,6 +159,9 @@ final class AgentSkillBundleExtension extends Extension
         $this->registerEvaluationServices($config, $container, $effectiveLoaderId, $agentId);
     }
 
+    /**
+     * @param array<string, mixed> $config
+     */
     private function registerEvaluationServices(array $config, ContainerBuilder $container, string $effectiveLoaderId, ?string $agentId): void
     {
         $container->setDefinition('agent_skills.eval_suite_loader', new Definition(EvalSuiteLoader::class));

@@ -14,12 +14,12 @@ use Laravel\Ai\Prompts\AgentPrompt;
  *
  * @author Guillaume Loulier <contact@guillaumeloulier.fr>
  */
-final class LaravelLlmClient implements LlmClientInterface
+final readonly class LaravelLlmClient implements LlmClientInterface
 {
     public function __construct(
-        private readonly AiManager $ai,
-        private readonly string $provider,
-        private readonly string $model,
+        private AiManager $ai,
+        private string $provider,
+        private string $model,
     ) {
     }
 

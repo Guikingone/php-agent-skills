@@ -22,11 +22,11 @@ use const PHP_BINARY;
 /**
  * @author Guillaume Loulier <contact@guillaumeloulier.fr>
  */
-final class ExecuteSkillScriptTool implements Tool
+final readonly class ExecuteSkillScriptTool implements Tool
 {
     public function __construct(
-        private readonly SkillLoaderInterface $loader,
-        private readonly string $skillName,
+        private SkillLoaderInterface $loader,
+        private string $skillName,
     ) {
     }
 

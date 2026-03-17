@@ -19,10 +19,10 @@ use function sprintf;
  *
  * @author Guillaume Loulier <contact@guillaumeloulier.fr>
  */
-final class EvalSuiteLoader implements EvalSuiteLoaderInterface
+final readonly class EvalSuiteLoader implements EvalSuiteLoaderInterface
 {
     public function __construct(
-        private readonly Filesystem $filesystem = new Filesystem(),
+        private Filesystem $filesystem = new Filesystem(),
     ) {
     }
 

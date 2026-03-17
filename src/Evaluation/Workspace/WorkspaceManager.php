@@ -20,11 +20,11 @@ use const JSON_THROW_ON_ERROR;
  *
  * @author Guillaume Loulier <contact@guillaumeloulier.fr>
  */
-final class WorkspaceManager implements WorkspaceManagerInterface
+final readonly class WorkspaceManager implements WorkspaceManagerInterface
 {
     public function __construct(
-        private readonly string $workspacePath,
-        private readonly Filesystem $filesystem = new Filesystem(),
+        private string $workspacePath,
+        private Filesystem $filesystem = new Filesystem(),
     ) {
     }
 

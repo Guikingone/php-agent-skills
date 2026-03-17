@@ -18,16 +18,16 @@ use function sprintf;
 /**
  * @author Guillaume Loulier <contact@guillaumeloulier.fr>
  */
-final class FilesystemSkillLoader implements SkillLoaderInterface
+final readonly class FilesystemSkillLoader implements SkillLoaderInterface
 {
     /**
      * @param string[] $skillDirectories Absolute paths to scan for skills
      */
     public function __construct(
-        private readonly array $skillDirectories,
-        private readonly SkillParserInterface $parser = new SkillParser(),
-        private readonly SkillValidatorInterface $skillValidator = new SkillValidator(),
-        private readonly Filesystem $filesystem = new Filesystem(),
+        private array $skillDirectories,
+        private SkillParserInterface $parser = new SkillParser(),
+        private SkillValidatorInterface $skillValidator = new SkillValidator(),
+        private Filesystem $filesystem = new Filesystem(),
     ) {
     }
 

@@ -13,7 +13,7 @@ use PHPUnit\Framework\TestCase;
 
 final class EvalRunResultTest extends TestCase
 {
-    public function testConstruction()
+    public function testConstruction(): void
     {
         $evalCase = new EvalCase(1, 'prompt', 'expected');
         $timing = new TimingResult(100, 500);
@@ -26,7 +26,7 @@ final class EvalRunResultTest extends TestCase
         $this->assertNull($result->getGrading());
     }
 
-    public function testWithGradingReturnsNewInstance()
+    public function testWithGradingReturnsNewInstance(): void
     {
         $evalCase = new EvalCase(1, 'prompt', 'expected');
         $timing = new TimingResult(100, 500);

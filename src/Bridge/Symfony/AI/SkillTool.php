@@ -24,11 +24,11 @@ use const PHP_BINARY;
 #[AsTool('get_skill', 'Load a skill by name', method: 'loadSkill')]
 #[AsTool('get_skills', 'Get all available skills', method: 'loadSkills')]
 #[AsTool('execute_skill_script', 'Execute a script from a skill', method: 'executeScript')]
-final class SkillTool
+final readonly class SkillTool
 {
     public function __construct(
-        private readonly SkillLoaderInterface $loader,
-        private readonly string $skillName,
+        private SkillLoaderInterface $loader,
+        private string $skillName,
     ) {
     }
 
@@ -108,7 +108,7 @@ final class SkillTool
             $process->mustRun();
 
             return sprintf("# Script execution: %s\n\n## Output\n\n```\n%s\n```", $script, $process->getOutput());
-        } catch (ProcessFailedException $e) {
+        } catch (ProcessFailedException) {
             return sprintf(
                 "# Script execution failed: %s\n\n## Error\n\n```\n%s\n```\n\n## Output\n\n```\n%s\n```",
                 $script,

@@ -21,7 +21,7 @@ use function trim;
  */
 final class SkillValidator implements SkillValidatorInterface
 {
-    private const ALLOWED_FIELDS = ['name', 'description', 'license', 'compatibility', 'metadata', 'allowed-tools'];
+    private const array ALLOWED_FIELDS = ['name', 'description', 'license', 'compatibility', 'metadata', 'allowed-tools'];
 
     public function validate(SkillInterface $skill): SkillValidationResult
     {
@@ -60,18 +60,7 @@ final class SkillValidator implements SkillValidatorInterface
             $errors[] = 'Field "license" must be a non-empty string.';
         }
 
-        // 4. Validate optional allowed-tools field
-        $allowedTools = $metadata->getAllowedTools();
-        $nonStringTools = array_filter(
-            $allowedTools,
-            static fn (mixed $tool): bool => !is_string($tool),
-        );
-
-        if ([] !== $allowedTools && [] !== $nonStringTools) {
-            $errors[] = sprintf('Field "allowed-fields" must contains strings, the following tools are not valid: "%s".', implode(', ', $allowedTools));
-        }
-
-        // 5. Validate optional compatibility field
+        // 4. Validate optional compatibility field
         $compatibility = $metadata->getCompatibility();
         if (null !== $compatibility) {
             $unicodeCompat = new UnicodeString($compatibility);

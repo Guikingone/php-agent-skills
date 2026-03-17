@@ -16,11 +16,11 @@ use function sprintf;
 /**
  * @author Guillaume Loulier <contact@guillaumeloulier.fr>
  */
-final class GetSkillTool implements Tool
+final readonly class GetSkillTool implements Tool
 {
     public function __construct(
-        private readonly SkillLoaderInterface $loader,
-        private readonly string $skillName,
+        private SkillLoaderInterface $loader,
+        private string $skillName,
     ) {
     }
 

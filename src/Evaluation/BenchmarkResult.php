@@ -9,15 +9,15 @@ namespace AgentSkills\Evaluation;
  *
  * @author Guillaume Loulier <contact@guillaumeloulier.fr>
  */
-final class BenchmarkResult
+final readonly class BenchmarkResult
 {
     public function __construct(
-        private readonly BenchmarkStatistic $withSkillPassRate,
-        private readonly BenchmarkStatistic $withoutSkillPassRate,
-        private readonly BenchmarkStatistic $withSkillTime,
-        private readonly BenchmarkStatistic $withoutSkillTime,
-        private readonly BenchmarkStatistic $withSkillTokens,
-        private readonly BenchmarkStatistic $withoutSkillTokens,
+        private BenchmarkStatistic $withSkillPassRate,
+        private BenchmarkStatistic $withoutSkillPassRate,
+        private BenchmarkStatistic $withSkillTime,
+        private BenchmarkStatistic $withoutSkillTime,
+        private BenchmarkStatistic $withSkillTokens,
+        private BenchmarkStatistic $withoutSkillTokens,
     ) {
     }
 

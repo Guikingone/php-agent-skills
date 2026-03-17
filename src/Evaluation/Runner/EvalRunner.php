@@ -15,11 +15,11 @@ use Symfony\Component\Clock\MonotonicClock;
  *
  * @author Guillaume Loulier <contact@guillaumeloulier.fr>
  */
-final class EvalRunner implements EvalRunnerInterface
+final readonly class EvalRunner implements EvalRunnerInterface
 {
     public function __construct(
-        private readonly AgentExecutorInterface $executor,
-        private readonly ClockInterface $clock = new MonotonicClock(),
+        private AgentExecutorInterface $executor,
+        private ClockInterface $clock = new MonotonicClock(),
     ) {
     }
 

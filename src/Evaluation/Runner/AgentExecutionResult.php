@@ -9,11 +9,11 @@ namespace AgentSkills\Evaluation\Runner;
  *
  * @author Guillaume Loulier <contact@guillaumeloulier.fr>
  */
-final class AgentExecutionResult
+final readonly class AgentExecutionResult
 {
     public function __construct(
-        private readonly string $output,
-        private readonly int $totalTokens,
+        private string $output,
+        private int $totalTokens,
     ) {
     }
 

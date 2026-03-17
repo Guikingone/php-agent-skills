@@ -14,11 +14,14 @@ use Symfony\AI\Platform\PlatformInterface;
  *
  * @author Guillaume Loulier <contact@guillaumeloulier.fr>
  */
-final class SymfonyLlmClient implements LlmClientInterface
+final readonly class SymfonyLlmClient implements LlmClientInterface
 {
+    /**
+     * @param non-empty-string $model
+     */
     public function __construct(
-        private readonly PlatformInterface $platform,
-        private readonly string $model,
+        private PlatformInterface $platform,
+        private string $model,
     ) {
     }
 

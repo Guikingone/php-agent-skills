@@ -14,7 +14,7 @@ use PHPUnit\Framework\TestCase;
 
 final class BenchmarkAggregatorTest extends TestCase
 {
-    public function testAggregateWithKnownValues()
+    public function testAggregateWithKnownValues(): void
     {
         $aggregator = new BenchmarkAggregator();
 
@@ -43,7 +43,7 @@ final class BenchmarkAggregatorTest extends TestCase
         $this->assertEqualsWithDelta(250.0, $result->getWithSkillTokens()->getMean(), 0.001);
     }
 
-    public function testDeltaComputation()
+    public function testDeltaComputation(): void
     {
         $aggregator = new BenchmarkAggregator();
 
@@ -58,7 +58,7 @@ final class BenchmarkAggregatorTest extends TestCase
         $this->assertEqualsWithDelta(100.0, $delta['tokens'], 0.001);
     }
 
-    public function testAggregateWithEmptyResults()
+    public function testAggregateWithEmptyResults(): void
     {
         $aggregator = new BenchmarkAggregator();
 
@@ -68,7 +68,7 @@ final class BenchmarkAggregatorTest extends TestCase
         $this->assertEqualsWithDelta(0.0, $result->getWithoutSkillPassRate()->getMean(), 0.001);
     }
 
-    public function testStddevComputation()
+    public function testStddevComputation(): void
     {
         $aggregator = new BenchmarkAggregator();
 

@@ -7,13 +7,13 @@ namespace AgentSkills;
 /**
  * @author Guillaume Loulier <contact@guillaumeloulier.fr>
  */
-final class ChainSkillLoader implements SkillLoaderInterface
+final readonly class ChainSkillLoader implements SkillLoaderInterface
 {
     /**
      * @param SkillLoaderInterface[] $loaders
      */
     public function __construct(
-        private readonly array $loaders,
+        private array $loaders,
     ) {
     }
 

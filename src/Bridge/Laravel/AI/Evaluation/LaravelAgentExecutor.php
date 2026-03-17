@@ -13,10 +13,10 @@ use Laravel\Ai\Contracts\Agent;
  *
  * @author Guillaume Loulier <contact@guillaumeloulier.fr>
  */
-final class LaravelAgentExecutor implements AgentExecutorInterface
+final readonly class LaravelAgentExecutor implements AgentExecutorInterface
 {
     public function __construct(
-        private readonly Agent $agent,
+        private Agent $agent,
     ) {
     }
 

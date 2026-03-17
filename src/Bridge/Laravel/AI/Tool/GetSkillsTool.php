@@ -18,10 +18,10 @@ use function sprintf;
 /**
  * @author Guillaume Loulier <contact@guillaumeloulier.fr>
  */
-final class GetSkillsTool implements Tool
+final readonly class GetSkillsTool implements Tool
 {
     public function __construct(
-        private readonly SkillLoaderInterface $loader,
+        private SkillLoaderInterface $loader,
     ) {
     }
 

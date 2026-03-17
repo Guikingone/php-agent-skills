@@ -154,7 +154,7 @@ final class EvalSkillCommand extends Command
             $this->workspaceManager->saveOutput($evalDir, $runResult->getOutput());
             $this->workspaceManager->saveTimingResult($evalDir, $runResult->getTiming());
 
-            if (!$skipGrading && null !== $this->grader && [] !== $evalCase->getAssertions()) {
+            if (!$skipGrading && $this->grader instanceof GraderInterface && [] !== $evalCase->getAssertions()) {
                 $grading = $this->grader->grade($runResult->getOutput(), $evalCase->getAssertions(), $evalCase->getExpectedOutput());
                 $runResult = $runResult->withGrading($grading);
                 $this->workspaceManager->saveGradingResult($evalDir, $grading);

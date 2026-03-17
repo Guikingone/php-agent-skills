@@ -22,16 +22,16 @@ use function sprintf;
  *
  * @author Guillaume Loulier <contact@guillaumeloulier.fr>
  */
-final class SkillInputProcessor implements InputProcessorInterface
+final readonly class SkillInputProcessor implements InputProcessorInterface
 {
     /**
      * @param string[] $activeSkills Skill names to fully load (Level 2), empty = metadata only
      * @param bool $includeIndex Whether to include a skill index in the system prompt
      */
     public function __construct(
-        private readonly SkillLoaderInterface $loader,
-        private readonly array $activeSkills = [],
-        private readonly bool $includeIndex = true,
+        private SkillLoaderInterface $loader,
+        private array $activeSkills = [],
+        private bool $includeIndex = true,
     ) {
     }
 
