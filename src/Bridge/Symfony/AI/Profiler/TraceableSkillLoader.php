@@ -15,12 +15,15 @@ use Symfony\Contracts\Service\ResetInterface;
  *
  * @phpstan-type SkillLoaderData array{
  *     skill?: SkillInterface,
- *     skills: SkillInterface[],
+ *     skills?: SkillInterface[],
  *     called_at: \DateTimeImmutable,
  * }
  */
 final class TraceableSkillLoader implements SkillLoaderInterface, ResetInterface
 {
+    /**
+     * @var SkillLoaderData[]
+     */
     public array $calls = [];
 
     public function __construct(

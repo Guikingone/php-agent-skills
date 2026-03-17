@@ -7,6 +7,7 @@ namespace AgentSkills\Bridge\Symfony\AI\DependencyInjection;
 use AgentSkills\Bridge\Symfony\AI\Command\EvalSkillCommand;
 use AgentSkills\Bridge\Symfony\AI\Command\ValidateSkillCommand;
 use AgentSkills\Bridge\Symfony\AI\Evaluation\SymfonyLlmClient;
+use AgentSkills\Bridge\Symfony\AI\Profiler\AgentSkillsDataCollector;
 use AgentSkills\Bridge\Symfony\AI\SkillInputProcessor;
 use AgentSkills\Bridge\Symfony\AI\SkillTool;
 use AgentSkills\ChainSkillLoader;
@@ -24,6 +25,7 @@ use AgentSkills\Validation\SkillValidatorInterface;
 use Override;
 use Symfony\AI\Agent\InputProcessorInterface;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
+use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
@@ -265,5 +267,18 @@ final class AgentSkillBundleExtension extends Extension
 
     private function registerProfiler(ContainerBuilder $container): void
     {
+        $container->register(AgentSkillsDataCollector::class, AgentSkillsDataCollector::class)
+            ->setArguments([
+                new AutowireIterator('agent_skills.traceable_skill_loader'),
+            ])
+            ->setPublic(false)
+            ->addTag('data_collector', [
+                'template' => '@AgentSkills/data_collector.html.twig',
+                'id' => 'agent_skill',
+            ])
+            ->addTag('container.preload', [
+                'class' => AgentSkillsDataCollector::class,
+            ])
+        ;
     }
 }
