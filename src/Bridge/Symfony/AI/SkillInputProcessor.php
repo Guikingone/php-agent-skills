@@ -10,6 +10,7 @@ use Symfony\AI\Agent\Input;
 use Symfony\AI\Agent\InputProcessorInterface;
 
 use function implode;
+use function is_string;
 use function sprintf;
 
 /**
@@ -66,7 +67,8 @@ final readonly class SkillInputProcessor implements InputProcessorInterface
 
         if ([] !== $systemPromptParts) {
             $skillPrompt = "# Agent Skills\n\n" . implode("\n\n", $systemPromptParts);
-            $options['system_prompt'] = ($options['system_prompt'] ?? '') . "\n\n" . $skillPrompt;
+            $existingPrompt = $options['system_prompt'] ?? '';
+            $options['system_prompt'] = (is_string($existingPrompt) ? $existingPrompt : '') . "\n\n" . $skillPrompt;
             $input->setOptions($options);
         }
     }

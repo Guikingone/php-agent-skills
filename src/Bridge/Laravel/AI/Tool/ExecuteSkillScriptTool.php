@@ -13,6 +13,12 @@ use RuntimeException;
 use Symfony\Component\Process\Exception\ProcessFailedException;
 use Symfony\Component\Process\Process;
 
+use function array_filter;
+use function array_values;
+use function is_array;
+use function is_float;
+use function is_int;
+use function is_string;
 use function pathinfo;
 use function sprintf;
 
@@ -62,13 +68,24 @@ final readonly class ExecuteSkillScriptTool implements Tool
         }
 
         $script = $request['script'];
-        $arguments = $request['arguments'] ?? [];
-        $timeout = $request['timeout'] ?? 60;
+        if (!is_string($script) || '' === $script) {
+            return 'Missing or invalid "script" parameter.';
+        }
+
+        $rawArguments = $request['arguments'] ?? [];
+        $arguments = is_array($rawArguments) ? array_values(array_filter($rawArguments, is_string(...))) : [];
+
+        $rawTimeout = $request['timeout'] ?? 60;
+        $timeout = is_int($rawTimeout) || is_float($rawTimeout) ? (float) $rawTimeout : 60.0;
 
         try {
             $scriptPath = $skill->loadScript($script);
         } catch (RuntimeException $e) {
             return sprintf('Error loading script "%s": "%s".', $script, $e->getMessage());
+        }
+
+        if (!is_string($scriptPath)) {
+            return sprintf('Script "%s" returned an invalid path.', $script);
         }
 
         $interpreter = $this->getInterpreter($scriptPath);

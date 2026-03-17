@@ -1,0 +1,14 @@
+includes:
+    - vendor/phpstan/phpstan-deprecation-rules/rules.neon
+    - vendor/phpstan/phpstan-phpunit/extension.neon
+    - vendor/phpstan/phpstan-phpunit/rules.neon
+
+parameters:
+    level: 9
+    paths:
+        - examples
+        - src/
+        - tests/
+    ignoreErrors:
+        - identifier: class.notFound
+          message: '#Illuminate\\Contracts\\JsonSchema\\JsonSchema#'

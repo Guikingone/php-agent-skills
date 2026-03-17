@@ -7,9 +7,7 @@ namespace AgentSkills\Validation;
 use AgentSkills\SkillInterface;
 use Symfony\Component\String\UnicodeString;
 
-use function array_filter;
 use function array_keys;
-use function array_values;
 use function implode;
 use function in_array;
 use function is_string;
@@ -72,13 +70,15 @@ final class SkillValidator implements SkillValidatorInterface
         }
 
         $metadataFields = $metadata->getMetadata();
-        $nonStringFields = array_filter(
-            array_values($metadataFields),
-            static fn (mixed $value): bool => !is_string($value),
-        );
+        $nonStringKeys = [];
+        foreach ($metadataFields as $key => $value) {
+            if (!is_string($value)) {
+                $nonStringKeys[] = $key;
+            }
+        }
 
-        if ([] !== $metadataFields && [] !== $nonStringFields) {
-            $errors[] = sprintf('Field "metadata" must contains strings either as keys and values, the following values are not valid: "%s".', implode(', ', $nonStringFields));
+        if ([] !== $nonStringKeys) {
+            $errors[] = sprintf('Field "metadata" must contain strings as values, the following keys have non-string values: "%s".', implode(', ', $nonStringKeys));
         }
 
         // 7. Check body content

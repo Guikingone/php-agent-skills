@@ -24,11 +24,13 @@ use function sys_get_temp_dir;
 final class AgentSkillsServiceProviderTest extends TestCase
 {
     private Application $app;
+    private Repository $config;
 
     protected function setUp(): void
     {
         $this->app = new Application(sys_get_temp_dir());
-        $this->app->instance('config', new Repository());
+        $this->config = new Repository();
+        $this->app->instance('config', $this->config);
     }
 
     protected function tearDown(): void
@@ -38,7 +40,7 @@ final class AgentSkillsServiceProviderTest extends TestCase
 
     public function testDoesNothingWhenDisabled(): void
     {
-        $this->app['config']->set('agent-skills.skills.enabled', false);
+        $this->config->set('agent-skills.skills.enabled', false);
 
         $provider = new AgentSkillsServiceProvider($this->app);
         $provider->register();
@@ -166,7 +168,7 @@ final class AgentSkillsServiceProviderTest extends TestCase
             ...$evalOverrides,
         ];
 
-        $this->app['config']->set('agent-skills.skills', $skills);
-        $this->app['config']->set('agent-skills.evaluation', $evaluation);
+        $this->config->set('agent-skills.skills', $skills);
+        $this->config->set('agent-skills.evaluation', $evaluation);
     }
 }

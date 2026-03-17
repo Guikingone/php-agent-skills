@@ -8,6 +8,7 @@ use AgentSkills\Exception\InvalidArgumentException;
 use Symfony\Component\String\UnicodeString;
 
 use function array_values;
+use function is_string;
 use function sprintf;
 
 /**
@@ -85,12 +86,16 @@ final readonly class SkillMetadata implements SkillMetadataInterface
 
     public function getAuthor(): ?string
     {
-        return $this->metadata['author'] ?? null;
+        $author = $this->metadata['author'] ?? null;
+
+        return is_string($author) ? $author : null;
     }
 
     public function getVersion(): ?string
     {
-        return $this->metadata['version'] ?? null;
+        $version = $this->metadata['version'] ?? null;
+
+        return is_string($version) ? $version : null;
     }
 
     public function getFrontmatter(): array

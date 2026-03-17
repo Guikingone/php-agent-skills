@@ -12,6 +12,7 @@ use Symfony\Component\Process\Exception\ProcessFailedException;
 use Symfony\Component\Process\Process;
 
 use function array_map;
+use function is_string;
 use function pathinfo;
 use function sprintf;
 
@@ -48,7 +49,9 @@ final readonly class SkillTool
         if (null !== $reference) {
             try {
                 $referenceContent = $skill->loadReference($reference);
-                $output .= sprintf("\n\n## Reference: %s\n\n%s", $reference, $referenceContent);
+                if (is_string($referenceContent)) {
+                    $output .= sprintf("\n\n## Reference: %s\n\n%s", $reference, $referenceContent);
+                }
             } catch (RuntimeException $e) {
                 $output .= sprintf("\n\n> Reference \"%s\" could not be loaded: %s", $reference, $e->getMessage());
             }
@@ -95,6 +98,10 @@ final readonly class SkillTool
             $scriptPath = $skill->loadScript($script);
         } catch (RuntimeException $e) {
             return sprintf('Error loading script "%s": "%s".', $script, $e->getMessage());
+        }
+
+        if (!is_string($scriptPath)) {
+            return sprintf('Script "%s" returned an invalid path.', $script);
         }
 
         // Determine the interpreter based on file extension

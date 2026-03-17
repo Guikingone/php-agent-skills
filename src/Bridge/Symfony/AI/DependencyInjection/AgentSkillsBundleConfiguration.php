@@ -12,6 +12,9 @@ use Symfony\Component\Config\Definition\ConfigurationInterface;
  */
 final class AgentSkillsBundleConfiguration implements ConfigurationInterface
 {
+    /**
+     * @return TreeBuilder<'array'>
+     */
     public function getConfigTreeBuilder(): TreeBuilder
     {
         $treeBuilder = new TreeBuilder('agent_skills');
