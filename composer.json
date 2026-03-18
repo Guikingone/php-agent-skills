@@ -36,11 +36,13 @@
     },
     "suggest": {
         "laravel/ai": "Required for the Laravel AI bridge",
+        "neuron-core/neuron-ai": "Required for the Neuron AI bridge",
         "symfony/ai-agent": "Required for the Symfony AI bridge"
     },
     "require-dev": {
         "friendsofphp/php-cs-fixer": "^3.94",
         "laravel/ai": "^0.3",
+        "neuron-core/neuron-ai": "^3.2",
         "phpstan/phpstan": "^2.1",
         "phpstan/phpstan-deprecation-rules": "^2.0",
         "phpstan/phpstan-phpunit": "^2.0",
