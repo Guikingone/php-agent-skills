@@ -7,6 +7,8 @@ namespace AgentSkills\Bridge\Symfony\AI\DependencyInjection;
 use AgentSkills\Bridge\Symfony\AI\Command\EvalSkillCommand;
 use AgentSkills\Bridge\Symfony\AI\Command\ValidateSkillCommand;
 use AgentSkills\Bridge\Symfony\AI\Evaluation\SymfonyLlmClient;
+use AgentSkills\Bridge\Symfony\AI\Profiler\AgentSkillsDataCollector;
+use AgentSkills\Bridge\Symfony\AI\Profiler\TraceableSkillLoader;
 use AgentSkills\Bridge\Symfony\AI\SkillInputProcessor;
 use AgentSkills\Bridge\Symfony\AI\SkillTool;
 use AgentSkills\ChainSkillLoader;
@@ -24,6 +26,8 @@ use AgentSkills\Validation\SkillValidatorInterface;
 use Override;
 use Symfony\AI\Agent\InputProcessorInterface;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
+use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
+use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Extension\Extension;
@@ -32,6 +36,7 @@ use Symfony\Component\String\UnicodeString;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 use function array_map;
+use function count;
 use function is_array;
 use function is_string;
 use function sprintf;
@@ -49,9 +54,7 @@ final class AgentSkillBundleExtension extends Extension
 
     public function load(array $configs, ContainerBuilder $container): void
     {
-        $agentSkillsBundleConfiguration = new AgentSkillsBundleConfiguration();
-
-        $config = $this->processConfiguration($agentSkillsBundleConfiguration, $configs);
+        $config = $this->processConfiguration(new AgentSkillsBundleConfiguration(), $configs);
 
         if (!$config['skills']['enabled']) {
             return;
@@ -66,105 +69,158 @@ final class AgentSkillBundleExtension extends Extension
         $container->registerForAutoconfiguration(SkillValidatorInterface::class)
             ->addTag('agent_skills.skill_validator');
 
-        if ('agent_skills.filesystem_loader' === $config['skills']['loader']) {
-            $skillParserDefinition = (new Definition(SkillParser::class))
-                ->setLazy(true)
+        $container->setDefinition('agent_skills.parser', (new Definition(SkillParser::class))
+            ->setLazy(true)
+            ->setArguments([new Reference('filesystem')])
+            ->addTag('proxy', ['interface' => SkillParserInterface::class]));
+
+        $container->setDefinition('agent_skills.validator', (new Definition(SkillValidator::class))
+            ->setLazy(true)
+            ->addTag('proxy', ['interface' => SkillValidatorInterface::class]));
+
+        /** @var array<string, array<string, mixed>> $agents */
+        $agents = $config['skills']['agents'];
+        $allEffectiveLoaderRefs = [];
+
+        foreach ($agents as $agentName => $agentConfig) {
+            $effectiveLoaderId = $this->registerAgentLoaders($container, $agentName, $agentConfig);
+
+            $traceableLoaderId = sprintf('agent_skills.%s.traceable_loader', $agentName);
+            $container->setDefinition($traceableLoaderId, (new Definition(TraceableSkillLoader::class))
                 ->setArguments([
-                    new Reference('filesystem'),
+                    new Reference($effectiveLoaderId),
                 ])
-                ->addTag('proxy', ['interface' => SkillParserInterface::class]);
+                ->addTag('agent_skills.traceable_skill_loader'));
 
-            $container->setDefinition('agent_skills.parser', $skillParserDefinition);
+            $allEffectiveLoaderRefs[] = new Reference($traceableLoaderId);
 
-            $skillValidatorDefinition = (new Definition(SkillValidator::class))
-                ->setLazy(true)
-                ->addTag('proxy', ['interface' => SkillValidatorInterface::class]);
+            $this->registerAgentInputProcessor($container, $agentName, $agentConfig, $traceableLoaderId);
+            $this->registerAgentTools($container, $agentName, $agentConfig, $traceableLoaderId);
+        }
 
-            $container->setDefinition('agent_skills.validator', $skillValidatorDefinition);
+        if (1 === count($allEffectiveLoaderRefs)) {
+            $container->setAlias(SkillLoaderInterface::class, (string) $allEffectiveLoaderRefs[0]);
+        } elseif (count($allEffectiveLoaderRefs) > 1) {
+            $container->setDefinition('agent_skills.global_chain_loader', new Definition(ChainSkillLoader::class, [
+                $allEffectiveLoaderRefs,
+            ]));
+            $container->setAlias(SkillLoaderInterface::class, 'agent_skills.global_chain_loader');
+        }
 
-            $filesystemSkillLoaderDefinition = (new Definition(FilesystemSkillLoader::class))
+        $this->registerEvaluationServices($config, $container, $agents);
+        $this->registerProfiler($container);
+    }
+
+    /**
+     * @param array<string, mixed> $agentConfig
+     */
+    private function registerAgentLoaders(ContainerBuilder $container, string $agentName, array $agentConfig): string
+    {
+        $loader = is_string($agentConfig['loader'] ?? null) ? $agentConfig['loader'] : 'agent_skills.filesystem_loader';
+
+        if ('agent_skills.filesystem_loader' !== $loader) {
+            return $loader;
+        }
+
+        $fsLoaderId = sprintf('agent_skills.%s.filesystem_loader', $agentName);
+        $directories = is_array($agentConfig['directories'] ?? null) ? $agentConfig['directories'] : [];
+
+        $container->setDefinition($fsLoaderId, (new Definition(FilesystemSkillLoader::class))
+            ->setArguments([
+                $directories,
+                new Reference('agent_skills.parser'),
+                new Reference('agent_skills.validator'),
+                new Reference('filesystem'),
+            ]));
+
+        $effectiveLoaderId = $fsLoaderId;
+
+        $githubRepositories = is_array($agentConfig['github_repositories'] ?? null) ? $agentConfig['github_repositories'] : [];
+        if ([] !== $githubRepositories) {
+            $ghLoaderId = sprintf('agent_skills.%s.github_loader', $agentName);
+            $container->setDefinition($ghLoaderId, (new Definition(GithubSkillLoader::class))
                 ->setArguments([
-                    $config['skills']['directories'],
+                    $githubRepositories,
+                    new Reference(HttpClientInterface::class),
                     new Reference('agent_skills.parser'),
                     new Reference('agent_skills.validator'),
-                    new Reference('filesystem'),
-                ]);
+                ]));
 
-            $container->setDefinition('agent_skills.filesystem_loader', $filesystemSkillLoaderDefinition);
+            $chainLoaderId = sprintf('agent_skills.%s.chain_loader', $agentName);
+            $container->setDefinition($chainLoaderId, new Definition(ChainSkillLoader::class, [[
+                new Reference($fsLoaderId),
+                new Reference($ghLoaderId),
+            ]]));
 
-            $githubRepositories = $config['skills']['github_repositories'] ?? [];
-            if ([] !== $githubRepositories) {
-                $githubSkillLoaderDefinition = (new Definition(GithubSkillLoader::class))
-                    ->setArguments([
-                        $githubRepositories,
-                        new Reference(HttpClientInterface::class),
-                        new Reference('agent_skills.parser'),
-                        new Reference('agent_skills.validator'),
-                    ]);
-
-                $container->setDefinition('agent_skills.github_loader', $githubSkillLoaderDefinition);
-
-                $chainSkillLoaderDefinition = (new Definition(ChainSkillLoader::class))
-                    ->setArguments([[
-                        new Reference('agent_skills.filesystem_loader'),
-                        new Reference('agent_skills.github_loader'),
-                    ]]);
-
-                $container->setDefinition('agent_skills.chain_loader', $chainSkillLoaderDefinition);
-            }
+            $effectiveLoaderId = $chainLoaderId;
         }
 
-        $effectiveLoaderId = $config['skills']['loader'];
-        if ('agent_skills.filesystem_loader' === $effectiveLoaderId && [] !== ($config['skills']['github_repositories'] ?? [])) {
-            $effectiveLoaderId = 'agent_skills.chain_loader';
-        }
+        return $effectiveLoaderId;
+    }
 
-        $container->setAlias(SkillLoaderInterface::class, $effectiveLoaderId);
+    /**
+     * @param array<string, mixed> $agentConfig
+     */
+    private function registerAgentInputProcessor(ContainerBuilder $container, string $agentName, array $agentConfig, string $effectiveLoaderId): void
+    {
+        $activeSkills = is_array($agentConfig['active_skills'] ?? null) ? $agentConfig['active_skills'] : [];
+        $includeIndex = (bool) ($agentConfig['include_index'] ?? false);
 
-        $agentId = $config['skills']['agent'] ?? null;
+        /** @var list<string> $activeSkillNames */
+        $activeSkillNames = array_map(
+            static fn (mixed $skill): string => is_array($skill) && is_string($skill['name'] ?? null) ? $skill['name'] : '',
+            $activeSkills,
+        );
 
-        $skillInputProcessorDefinition = (new Definition(SkillInputProcessor::class))
+        $inputProcessorId = sprintf('agent_skills.%s.input_processor', $agentName);
+
+        $container->setDefinition($inputProcessorId, (new Definition(SkillInputProcessor::class))
             ->setLazy(true)
             ->setArguments([
                 new Reference($effectiveLoaderId),
-                array_map(
-                    static fn (array $skill): string => $skill['name'],
-                    $config['skills']['active_skills'],
-                ),
-                $config['skills']['include_index'],
+                $activeSkillNames,
+                $includeIndex,
             ])
             ->addTag('proxy', ['interface' => InputProcessorInterface::class])
-            ->addTag('ai.agent.input_processor', ['agent' => $agentId, 'priority' => -50]);
+            ->addTag('ai.agent.input_processor', ['agent' => $agentName, 'priority' => -50]));
+    }
 
-        $container->setDefinition('agent_skills.input_processor', $skillInputProcessorDefinition);
+    /**
+     * @param array<string, mixed> $agentConfig
+     */
+    private function registerAgentTools(ContainerBuilder $container, string $agentName, array $agentConfig, string $effectiveLoaderId): void
+    {
+        $activeSkills = is_array($agentConfig['active_skills'] ?? null) ? $agentConfig['active_skills'] : [];
 
-        if (null !== $agentId) {
-            foreach ($config['skills']['active_skills'] as $activeSkill) {
-                $skillToolServiceIdentifier = sprintf('agent_skills.tool.%s.%s', $agentId, $activeSkill['name']);
+        foreach ($activeSkills as $activeSkill) {
+            if (!is_array($activeSkill) || !is_string($activeSkill['name'] ?? null)) {
+                continue;
+            }
 
-                $skillToolDefinition = (new Definition(SkillTool::class, [
-                    new Reference($effectiveLoaderId),
-                    $activeSkill['name'],
-                ]))->addTag('ai.agent.skill_as_tool');
+            $skillName = $activeSkill['name'];
+            $toolId = sprintf('agent_skills.tool.%s.%s', $agentName, $skillName);
 
-                $container->setDefinition($skillToolServiceIdentifier, $skillToolDefinition);
+            $container->setDefinition($toolId, (new Definition(SkillTool::class, [
+                new Reference($effectiveLoaderId),
+                $skillName,
+            ]))->addTag('ai.agent.skill_as_tool'));
 
-                $memoryFactoryDefinition = $container->getDefinition('ai.toolbox.' . $agentId . '.memory_factory');
-                $memoryFactoryDefinition->addMethodCall('addTool', [
-                    new Reference($skillToolServiceIdentifier),
-                    sprintf('skill_%s', (new UnicodeString($activeSkill['name']))->replace('-', '_')),
-                    sprintf('Consult the "%s" skill for specialized knowledge and instructions. Pass an optional reference file path for detailed documentation.', $activeSkill['name']),
+            $memoryFactoryId = sprintf('ai.toolbox.%s.memory_factory', $agentName);
+            if ($container->hasDefinition($memoryFactoryId)) {
+                $container->getDefinition($memoryFactoryId)->addMethodCall('addTool', [
+                    new Reference($toolId),
+                    sprintf('skill_%s', (new UnicodeString($skillName))->replace('-', '_')),
+                    sprintf('Consult the "%s" skill for specialized knowledge and instructions. Pass an optional reference file path for detailed documentation.', $skillName),
                 ]);
             }
         }
-
-        $this->registerEvaluationServices($config, $container, $effectiveLoaderId, $agentId);
     }
 
     /**
      * @param array<string, mixed> $config
+     * @param array<string, array<string, mixed>> $agents
      */
-    private function registerEvaluationServices(array $config, ContainerBuilder $container, string $effectiveLoaderId, ?string $agentId): void
+    private function registerEvaluationServices(array $config, ContainerBuilder $container, array $agents): void
     {
         $container->setDefinition('agent_skills.eval_suite_loader', new Definition(EvalSuiteLoader::class));
 
@@ -184,13 +240,11 @@ final class AgentSkillBundleExtension extends Extension
         $gradingPlatform = $evaluation['grading_platform'] ?? null;
 
         if (is_string($gradingModel) && is_string($gradingPlatform)) {
-            $llmClientDefinition = (new Definition(SymfonyLlmClient::class))
+            $container->setDefinition('agent_skills.llm_client', (new Definition(SymfonyLlmClient::class))
                 ->setArguments([
                     new Reference($gradingPlatform),
                     $gradingModel,
-                ]);
-
-            $container->setDefinition('agent_skills.llm_client', $llmClientDefinition);
+                ]));
 
             $container->setDefinition(
                 'agent_skills.grader',
@@ -199,28 +253,40 @@ final class AgentSkillBundleExtension extends Extension
             );
         }
 
-        $validateCommandDefinition = (new Definition(ValidateSkillCommand::class))
-            ->setArguments([
-                new Reference($effectiveLoaderId),
-                new Reference('agent_skills.validator'),
-            ])
-            ->addTag('console.command');
+        if ([] !== $agents) {
+            $container->setDefinition('agent_skills.command.validate_skills', (new Definition(ValidateSkillCommand::class))
+                ->setArguments([
+                    new Reference(SkillLoaderInterface::class),
+                    new Reference('agent_skills.validator'),
+                ])
+                ->addTag('console.command'));
 
-        $container->setDefinition('agent_skills.command.validate_skills', $validateCommandDefinition);
-
-        if (null !== $agentId) {
-            $evalCommandDefinition = (new Definition(EvalSkillCommand::class))
+            $container->setDefinition('agent_skills.command.eval_skill', (new Definition(EvalSkillCommand::class))
                 ->setArguments([
                     new Reference('agent_skills.eval_suite_loader'),
                     new Reference('agent_skills.workspace_manager'),
                     new Reference('agent_skills.benchmark_aggregator'),
                     new Reference('clock'),
-                    new Reference('ai.agent_locator'),
-                    null !== $gradingModel && null !== $gradingPlatform ? new Reference('agent_skills.grader') : null,
+                    new AutowireLocator('ai.agent'),
+                    is_string($gradingModel) && is_string($gradingPlatform) ? new Reference('agent_skills.grader') : null,
                 ])
-                ->addTag('console.command');
-
-            $container->setDefinition('agent_skills.command.eval_skill', $evalCommandDefinition);
+                ->addTag('console.command'));
         }
+    }
+
+    private function registerProfiler(ContainerBuilder $container): void
+    {
+        $container->register(AgentSkillsDataCollector::class, AgentSkillsDataCollector::class)
+            ->setArguments([
+                new AutowireIterator('agent_skills.traceable_skill_loader'),
+            ])
+            ->setPublic(false)
+            ->addTag('data_collector', [
+                'template' => '@AgentSkills/data_collector.html.twig',
+                'id' => 'agent_skill',
+            ])
+            ->addTag('container.preload', [
+                'class' => AgentSkillsDataCollector::class,
+            ]);
     }
 }

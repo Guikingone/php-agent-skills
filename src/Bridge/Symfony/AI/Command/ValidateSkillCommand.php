@@ -7,15 +7,12 @@ namespace AgentSkills\Bridge\Symfony\AI\Command;
 use AgentSkills\SkillInterface;
 use AgentSkills\SkillLoaderInterface;
 use AgentSkills\Validation\SkillValidatorInterface;
+use Symfony\Component\Console\Attribute\Argument;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
-use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Input\InputOption;
-use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
 use function count;
-use function is_string;
 use function sprintf;
 
 /**
@@ -25,29 +22,18 @@ use function sprintf;
     name: 'ai:agent:validate-skills',
     description: 'Validate Agent Skills against the specification',
 )]
-final class ValidateSkillCommand extends Command
+final readonly class ValidateSkillCommand
 {
     public function __construct(
-        private readonly SkillLoaderInterface $skillLoader,
-        private readonly SkillValidatorInterface $skillValidator,
+        private SkillLoaderInterface $skillLoader,
+        private SkillValidatorInterface $skillValidator,
     ) {
-        parent::__construct();
     }
 
-    protected function configure(): void
+    public function __invoke(SymfonyStyle $io, #[Argument] ?string $skill = null): int
     {
-        $this
-            ->addOption('skill', null, InputOption::VALUE_REQUIRED, 'The name of a specific skill to validate');
-    }
-
-    protected function execute(InputInterface $input, OutputInterface $output): int
-    {
-        $io = new SymfonyStyle($input, $output);
-
-        $skillName = $input->getOption('skill');
-
-        if (is_string($skillName) && '' !== $skillName) {
-            return $this->validateSingleSkill($io, $skillName);
+        if (null !== $skill && '' !== $skill) {
+            return $this->validateSingleSkill($io, $skill);
         }
 
         return $this->validateAllSkills($io);
@@ -109,7 +95,6 @@ final class ValidateSkillCommand extends Command
         $totalWarnings = 0;
         $hasErrors = false;
 
-        /** @var SkillInterface $skill */
         foreach ($skills as $skill) {
             $result = $this->skillValidator->validate($skill);
             $warningCount = count($result->getWarnings());
