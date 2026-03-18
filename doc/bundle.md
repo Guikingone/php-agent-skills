@@ -134,6 +134,36 @@ and the agent name), and tool registrations. When multiple agents are configured
 ``ChainSkillLoader`` is registered as the ``SkillLoaderInterface`` alias, composing all
 per-agent loaders.
 
+## Web Profiler
+
+When ``symfony/web-profiler-bundle`` is installed, a dedicated **Agent Skills** panel is
+automatically available in the Symfony toolbar and profiler. No extra configuration is needed —
+the profiler integration is enabled as soon as skills are configured.
+
+### What is tracked
+
+Each agent's skill loader is automatically wrapped in a ``TraceableSkillLoader`` that records
+every call to ``loadSkill()``, ``loadSkills()``, and ``discoverMetadata()``. The
+``AgentSkillsDataCollector`` aggregates data from all agents and exposes it in the profiler.
+
+### Toolbar
+
+The Web Debug Toolbar displays:
+
+* **Skills loaded** — total number of distinct skills loaded during the request
+* **Loader calls** — total number of loader method invocations across all agents
+
+### Profiler panel
+
+Clicking the toolbar item opens the full profiler panel, which shows:
+
+* **Loaded Skills** table — name and description of each skill that was loaded
+* **Loader Calls** table — each call with its method (``loadSkill``, ``loadSkills``,
+  ``discoverMetadata``), details (skill name, count), and timestamp
+
+This is useful for debugging which skills are loaded per request, spotting duplicate loads,
+and verifying that the correct agent loaders are being used.
+
 ## Skill Evaluation
 
 The evaluation system measures how well an agent performs with and without a skill. Configure
