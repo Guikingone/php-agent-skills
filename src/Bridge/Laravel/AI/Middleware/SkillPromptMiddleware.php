@@ -59,7 +59,7 @@ final readonly class SkillPromptMiddleware
                 continue;
             }
 
-            $systemPromptParts[] = sprintf("## Skill: %s\n\n%s", $skill->getName(), $skill->getBody());
+            $systemPromptParts[] = sprintf("## Skill: %s\n\n%s", $skill->getName(), $skill->getBody()) . $skill->getResourceListing();
         }
 
         if ([] !== $systemPromptParts) {

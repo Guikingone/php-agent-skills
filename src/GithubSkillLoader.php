@@ -68,6 +68,9 @@ final readonly class GithubSkillLoader implements SkillLoaderInterface
                     $this->createScriptsLoader($config, $name),
                     $this->createReferencesLoader($config, $name),
                     $this->createAssetsLoader($config, $name),
+                    $this->createScriptsLister($config, $name),
+                    $this->createReferencesLister($config, $name),
+                    $this->createAssetsLister($config, $name),
                 );
 
                 if ($skill->getName() !== $name) {
@@ -112,6 +115,9 @@ final readonly class GithubSkillLoader implements SkillLoaderInterface
                         $this->createScriptsLoader($config, $skillName),
                         $this->createReferencesLoader($config, $skillName),
                         $this->createAssetsLoader($config, $skillName),
+                        $this->createScriptsLister($config, $skillName),
+                        $this->createReferencesLister($config, $skillName),
+                        $this->createAssetsLister($config, $skillName),
                     );
 
                     $validation = $this->skillValidator->validate($skill);
@@ -281,6 +287,68 @@ final readonly class GithubSkillLoader implements SkillLoaderInterface
                 return null;
             }
         };
+    }
+
+    /**
+     * @param array{repository: string, path: string, branch: string, token: string|null} $config
+     */
+    private function createScriptsLister(array $config, string $skillName): Closure
+    {
+        return fn (): array => $this->listDirectoryContents($config, $this->buildSkillPath($config['path'], $skillName, 'scripts'));
+    }
+
+    /**
+     * @param array{repository: string, path: string, branch: string, token: string|null} $config
+     */
+    private function createReferencesLister(array $config, string $skillName): Closure
+    {
+        return fn (): array => $this->listDirectoryContents($config, $this->buildSkillPath($config['path'], $skillName, 'references'));
+    }
+
+    /**
+     * @param array{repository: string, path: string, branch: string, token: string|null} $config
+     */
+    private function createAssetsLister(array $config, string $skillName): Closure
+    {
+        return fn (): array => $this->listDirectoryContents($config, $this->buildSkillPath($config['path'], $skillName, 'assets'));
+    }
+
+    /**
+     * Lists file names in a directory via the GitHub Contents API.
+     *
+     * @param array{repository: string, path: string, branch: string, token: string|null} $config
+     *
+     * @return string[]
+     */
+    private function listDirectoryContents(array $config, string $path): array
+    {
+        [$owner, $repo] = explode('/', $config['repository'], 2);
+
+        $url = sprintf('%s/repos/%s/%s/contents/%s', self::GITHUB_API_BASE, $owner, $repo, $path);
+
+        try {
+            $response = $this->httpClient->request('GET', $url, [
+                'headers' => $this->buildHeaders($config['token']),
+                'query' => ['ref' => $config['branch']],
+            ]);
+
+            if (200 !== $response->getStatusCode()) {
+                return [];
+            }
+
+            $entries = $response->toArray();
+            $files = [];
+
+            foreach ($entries as $entry) {
+                if ('file' === ($entry['type'] ?? null) && is_string($entry['name'] ?? null)) {
+                    $files[] = $entry['name'];
+                }
+            }
+
+            return $files;
+        } catch (Throwable) {
+            return [];
+        }
     }
 
     private function buildSkillPath(string $basePath, string $skillName, string $file): string

@@ -60,7 +60,7 @@ final readonly class SkillInputProcessor implements InputProcessorInterface
                 continue;
             }
 
-            $systemPromptParts[] = sprintf("## Skill: %s\n\n%s", $skill->getName(), $skill->getBody());
+            $systemPromptParts[] = sprintf("## Skill: %s\n\n%s", $skill->getName(), $skill->getBody()) . $skill->getResourceListing();
         }
 
         $options = $input->getOptions();

@@ -103,6 +103,10 @@ Each active skill is registered as a tool named ``skill_{name}`` (with dashes co
 underscores). The agent can call these tools to load skill content, reference files, and
 execute scripts on demand.
 
+When a skill is loaded via a tool, the output automatically includes a **resource listing**
+showing available scripts, references, and assets. This enables the agent to discover and
+request specific resources by name without prior knowledge of the skill's directory contents.
+
 ## Multi-Agent Configuration
 
 You can define multiple agents, each with their own dedicated skill sets:

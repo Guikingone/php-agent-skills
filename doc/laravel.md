@@ -37,16 +37,17 @@ The full configuration file (``config/agent-skills.php``):
 return [
     'skills' => [
         'enabled' => env('AGENT_SKILLS_ENABLED', false),
-        'agent' => env('AGENT_SKILLS_AGENT'),
-        'directories' => [
-            resource_path('skills'),
+        'agents' => [
+            // 'my_agent' => [
+            //     'directories' => [resource_path('skills')],
+            //     'github_repositories' => [],
+            //     'active_skills' => ['my-skill'],
+            //     'include_index' => false,
+            // ],
         ],
-        'github_repositories' => [],
-        'active_skills' => [],
-        'include_index' => false,
     ],
     'evaluation' => [
-        'workspace' => storage_path('app/skill-evals'),
+        'workspace' => env('AGENT_SKILLS_EVAL_WORKSPACE', 'storage/app/skill-evals'),
         'grading_model' => env('AGENT_SKILLS_GRADING_MODEL'),
         'grading_provider' => env('AGENT_SKILLS_GRADING_PROVIDER'),
     ],
@@ -56,11 +57,11 @@ return [
 Configuration options:
 
 * ``enabled`` (bool, default: ``false``): Enable or disable the skills integration
-* ``agent`` (string, optional): Agent class name for tool registration and eval commands
-* ``directories`` (array): Local directories to scan for skills
-* ``github_repositories`` (array): GitHub repositories to load skills from
-* ``active_skills`` (array): Skill names to fully load and register as tools
-* ``include_index`` (bool, default: ``false``): Include a skill metadata index in prompts
+* ``agents`` (array): Map of agent names to their configuration. Each agent entry supports:
+  * ``directories`` (array): Local directories to scan for skills
+  * ``github_repositories`` (array): GitHub repositories to load skills from
+  * ``active_skills`` (array): Skill names to fully load and register as tools
+  * ``include_index`` (bool, default: ``false``): Include a skill metadata index in prompts
 * ``workspace`` (string): Directory to store evaluation results
 * ``grading_model`` (string, optional): Model for LLM-based assertion grading
 * ``grading_provider`` (string, optional): Provider name for the grading model
@@ -73,16 +74,19 @@ Skills stored in local directories are loaded by the filesystem loader:
 // config/agent-skills.php
 'skills' => [
     'enabled' => true,
-    'agent' => \App\Agents\MyAgent::class,
-    'directories' => [
-        resource_path('skills'),
-        base_path('vendor/my-org/shared-skills'),
+    'agents' => [
+        'my_agent' => [
+            'directories' => [
+                resource_path('skills'),
+                base_path('vendor/my-org/shared-skills'),
+            ],
+            'active_skills' => [
+                'twig-component',
+                'laravel-console',
+            ],
+            'include_index' => true,
+        ],
     ],
-    'active_skills' => [
-        'twig-component',
-        'laravel-console',
-    ],
-    'include_index' => true,
 ],
 ```
 
@@ -96,30 +100,33 @@ is automatically created to transparently compose both loaders:
 // config/agent-skills.php
 'skills' => [
     'enabled' => true,
-    'agent' => \App\Agents\MyAgent::class,
-    'directories' => [
-        resource_path('skills'),
-    ],
-    'github_repositories' => [
-        // Public repository
-        ['repository' => 'my-org/shared-skills'],
+    'agents' => [
+        'my_agent' => [
+            'directories' => [
+                resource_path('skills'),
+            ],
+            'github_repositories' => [
+                // Public repository
+                ['repository' => 'my-org/shared-skills'],
 
-        // Private repository with authentication
-        [
-            'repository' => 'my-org/private-skills',
-            'token' => env('GITHUB_TOKEN'),
-        ],
+                // Private repository with authentication
+                [
+                    'repository' => 'my-org/private-skills',
+                    'token' => env('GITHUB_TOKEN'),
+                ],
 
-        // Custom branch and subdirectory
-        [
-            'repository' => 'my-org/monorepo',
-            'path' => 'ai/skills',
-            'branch' => 'develop',
-            'token' => env('GITHUB_TOKEN'),
+                // Custom branch and subdirectory
+                [
+                    'repository' => 'my-org/monorepo',
+                    'path' => 'ai/skills',
+                    'branch' => 'develop',
+                    'token' => env('GITHUB_TOKEN'),
+                ],
+            ],
+            'active_skills' => [
+                'twig-component',
+            ],
         ],
-    ],
-    'active_skills' => [
-        'twig-component',
     ],
 ],
 ```
@@ -142,13 +149,16 @@ To use only GitHub-based skills without local directories:
 // config/agent-skills.php
 'skills' => [
     'enabled' => true,
-    'agent' => \App\Agents\MyAgent::class,
-    'directories' => [],
-    'github_repositories' => [
-        ['repository' => 'my-org/skills'],
-    ],
-    'active_skills' => [
-        'my-skill',
+    'agents' => [
+        'my_agent' => [
+            'directories' => [],
+            'github_repositories' => [
+                ['repository' => 'my-org/skills'],
+            ],
+            'active_skills' => [
+                'my-skill',
+            ],
+        ],
     ],
 ],
 ```
@@ -164,8 +174,12 @@ injected into your agents:
 * ``ExecuteSkillScriptTool``: Execute a script from the skill's ``scripts/`` directory
 
 Each active skill gets its own ``GetSkillTool`` and ``ExecuteSkillScriptTool`` instances, registered
-in the container as ``agent_skills.tool.get_skill.{skill-name}`` and
-``agent_skills.tool.execute_script.{skill-name}``.
+in the container as ``agent_skills.tool.{agent}.{skill-name}`` and
+``agent_skills.tool.{agent}.execute_script.{skill-name}``.
+
+When a skill is loaded via a tool, the output automatically includes a **resource listing**
+showing available scripts, references, and assets. This enables the agent to discover and
+request specific resources by name without prior knowledge of the skill's directory contents.
 
 To use skills as tools in your agent, implement the ``HasTools`` contract and return the tool
 instances:
@@ -190,9 +204,9 @@ class MyAgent implements Agent, HasTools
     public function tools(): iterable
     {
         return [
-            app()->make(GetSkillsTool::class),
-            app()->make('agent_skills.tool.get_skill.my-skill'),
-            app()->make('agent_skills.tool.execute_script.my-skill'),
+            app()->make('agent_skills.tool.my_agent.get_skills'),
+            app()->make('agent_skills.tool.my_agent.my-skill'),
+            app()->make('agent_skills.tool.my_agent.execute_script.my-skill'),
         ];
     }
 }
@@ -204,7 +218,8 @@ The ``SkillPromptMiddleware`` injects skill instructions directly into the agent
 providing contextual knowledge before the LLM call. This is the equivalent of Symfony AI's
 ``SkillInputProcessor``.
 
-To attach the middleware to your agent, implement the ``HasMiddleware`` contract:
+To attach the middleware to your agent, implement the ``HasMiddleware`` contract and resolve the
+per-agent middleware from the container:
 
 ```php
 use AgentSkills\Bridge\Laravel\AI\Middleware\SkillPromptMiddleware;
@@ -224,7 +239,7 @@ class MyAgent implements Agent, HasMiddleware
     public function middleware(): array
     {
         return [
-            app()->make(SkillPromptMiddleware::class),
+            app()->make('agent_skills.my_agent.middleware'),
         ];
     }
 }
@@ -244,6 +259,48 @@ This approach is ideal when:
 * The agent needs consistent access to specific knowledge
 * The skill content should influence all agent responses
 * You want the agent to follow specific guidelines or patterns
+
+## Multi-Agent Configuration
+
+You can define multiple agents, each with their own dedicated skill sets:
+
+```php
+// config/agent-skills.php
+'skills' => [
+    'enabled' => true,
+    'agents' => [
+        'code_reviewer' => [
+            'directories' => [
+                resource_path('skills/review'),
+            ],
+            'github_repositories' => [],
+            'active_skills' => [
+                'code-review',
+                'security-audit',
+            ],
+            'include_index' => false,
+        ],
+        'assistant' => [
+            'directories' => [
+                resource_path('skills/assistant'),
+            ],
+            'github_repositories' => [
+                ['repository' => 'my-org/shared-skills'],
+            ],
+            'active_skills' => [
+                'twig-component',
+                'laravel-console',
+            ],
+            'include_index' => true,
+        ],
+    ],
+],
+```
+
+Each agent gets its own loader, middleware (``agent_skills.{agent}.middleware``), and tool
+registrations (``agent_skills.tool.{agent}.{skill}``). When multiple agents are configured,
+a global ``ChainSkillLoader`` is registered as the ``SkillLoaderInterface`` alias, composing
+all per-agent loaders.
 
 ## Skill Evaluation
 
@@ -276,7 +333,6 @@ registered when skills are enabled. See the `Commands`_ documentation for usage 
 | Variable | Default | Description |
 |---|---|---|
 | ``AGENT_SKILLS_ENABLED`` | ``false`` | Enable or disable the skills integration |
-| ``AGENT_SKILLS_AGENT`` | ``null`` | Agent class name for tool/eval registration |
 | ``AGENT_SKILLS_EVAL_WORKSPACE`` | ``storage/app/skill-evals`` | Evaluation workspace directory |
 | ``AGENT_SKILLS_GRADING_MODEL`` | ``null`` | LLM model for assertion grading |
 | ``AGENT_SKILLS_GRADING_PROVIDER`` | ``null`` | Provider for the grading model |

@@ -35,8 +35,12 @@ use Laravel\Ai\AiManager;
 use Override;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
+use function array_map;
+use function count;
 use function dirname;
+use function is_array;
 use function is_string;
+use function sprintf;
 
 /**
  * @author Guillaume Loulier <contact@guillaumeloulier.fr>
@@ -59,9 +63,7 @@ final class AgentSkillsServiceProvider extends ServiceProvider
         }
 
         $this->registerCoreServices();
-        $this->registerSkillLoaders();
-        $this->registerMiddleware();
-        $this->registerTools();
+        $this->registerAgents();
         $this->registerEvaluationServices();
     }
 
@@ -81,7 +83,10 @@ final class AgentSkillsServiceProvider extends ServiceProvider
 
         $commands = [ValidateSkillCommand::class];
 
-        if (null !== $this->config()->get('agent-skills.skills.agent')) {
+        /** @var array<string, mixed> $agents */
+        $agents = $this->config()->get('agent-skills.skills.agents', []);
+
+        if ([] !== $agents) {
             $commands[] = EvalSkillCommand::class;
         }
 
@@ -95,61 +100,127 @@ final class AgentSkillsServiceProvider extends ServiceProvider
         $this->app->singleton(SkillValidatorInterface::class, static fn (): SkillValidator => new SkillValidator());
     }
 
-    private function registerSkillLoaders(): void
+    private function registerAgents(): void
+    {
+        /** @var array<string, mixed> $agents */
+        $agents = $this->config()->get('agent-skills.skills.agents', []);
+        $allLoaderKeys = [];
+
+        foreach ($agents as $agentName => $agentConfig) {
+            if (!is_array($agentConfig)) {
+                continue;
+            }
+
+            /** @var array<string, mixed> $agentConfig */
+            $effectiveLoaderKey = $this->registerAgentLoaders((string) $agentName, $agentConfig);
+            $allLoaderKeys[] = $effectiveLoaderKey;
+
+            $this->registerAgentMiddleware((string) $agentName, $agentConfig, $effectiveLoaderKey);
+            $this->registerAgentTools((string) $agentName, $agentConfig, $effectiveLoaderKey);
+        }
+
+        if (1 === count($allLoaderKeys)) {
+            $this->app->alias($allLoaderKeys[0], SkillLoaderInterface::class);
+        } elseif (count($allLoaderKeys) > 1) {
+            $this->app->singleton(SkillLoaderInterface::class, static fn ($app): ChainSkillLoader => new ChainSkillLoader(
+                array_map(static fn (string $key): SkillLoaderInterface => $app->make($key), $allLoaderKeys),
+            ));
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $agentConfig
+     */
+    private function registerAgentLoaders(string $agentName, array $agentConfig): string
     {
         /** @var array<int, string> $directories */
-        $directories = $this->config()->get('agent-skills.skills.directories', []);
+        $directories = is_array($agentConfig['directories'] ?? null) ? $agentConfig['directories'] : [];
 
-        $this->app->singleton('agent_skills.filesystem_loader', static fn ($app): FilesystemSkillLoader => new FilesystemSkillLoader(
+        $fsLoaderId = sprintf('agent_skills.%s.filesystem_loader', $agentName);
+
+        $this->app->singleton($fsLoaderId, static fn ($app): FilesystemSkillLoader => new FilesystemSkillLoader(
             $directories,
             $app->make(SkillParserInterface::class),
             $app->make(SkillValidatorInterface::class),
         ));
 
+        $effectiveLoaderKey = $fsLoaderId;
+
         /** @var array<int, array{repository: string, path?: string, branch?: string, token?: string|null}> $githubRepositories */
-        $githubRepositories = $this->config()->get('agent-skills.skills.github_repositories', []);
+        $githubRepositories = is_array($agentConfig['github_repositories'] ?? null) ? $agentConfig['github_repositories'] : [];
 
         if ([] !== $githubRepositories) {
-            $this->app->singleton('agent_skills.github_loader', static fn ($app): GithubSkillLoader => new GithubSkillLoader(
+            $ghLoaderId = sprintf('agent_skills.%s.github_loader', $agentName);
+
+            $this->app->singleton($ghLoaderId, static fn ($app): GithubSkillLoader => new GithubSkillLoader(
                 $githubRepositories,
                 $app->make(HttpClientInterface::class),
                 $app->make(SkillParserInterface::class),
                 $app->make(SkillValidatorInterface::class),
             ));
 
-            $this->app->singleton(SkillLoaderInterface::class, static fn ($app): ChainSkillLoader => new ChainSkillLoader([
-                $app->make('agent_skills.filesystem_loader'),
-                $app->make('agent_skills.github_loader'),
-            ]));
-        } else {
-            $this->app->alias('agent_skills.filesystem_loader', SkillLoaderInterface::class);
+            $chainLoaderId = sprintf('agent_skills.%s.chain_loader', $agentName);
+
+            $this->app->singleton($chainLoaderId, static function ($app) use ($fsLoaderId, $ghLoaderId): ChainSkillLoader {
+                return new ChainSkillLoader([
+                    $app->make($fsLoaderId),
+                    $app->make($ghLoaderId),
+                ]);
+            });
+
+            $effectiveLoaderKey = $chainLoaderId;
         }
+
+        return $effectiveLoaderKey;
     }
 
-    private function registerMiddleware(): void
+    /**
+     * @param array<string, mixed> $agentConfig
+     */
+    private function registerAgentMiddleware(string $agentName, array $agentConfig, string $effectiveLoaderKey): void
     {
         /** @var array<int, string> $activeSkills */
-        $activeSkills = $this->config()->get('agent-skills.skills.active_skills', []);
-        $includeIndex = (bool) $this->config()->get('agent-skills.skills.include_index', false);
+        $activeSkills = is_array($agentConfig['active_skills'] ?? null) ? $agentConfig['active_skills'] : [];
+        $includeIndex = (bool) ($agentConfig['include_index'] ?? false);
 
-        $this->app->singleton(SkillPromptMiddleware::class, static fn ($app): SkillPromptMiddleware => new SkillPromptMiddleware(
-            $app->make(SkillLoaderInterface::class),
-            $activeSkills,
-            $includeIndex,
-        ));
+        $middlewareId = sprintf('agent_skills.%s.middleware', $agentName);
+
+        $this->app->singleton($middlewareId, static function ($app) use ($effectiveLoaderKey, $activeSkills, $includeIndex): SkillPromptMiddleware {
+            return new SkillPromptMiddleware(
+                $app->make($effectiveLoaderKey),
+                $activeSkills,
+                $includeIndex,
+            );
+        });
     }
 
-    private function registerTools(): void
+    /**
+     * @param array<string, mixed> $agentConfig
+     */
+    private function registerAgentTools(string $agentName, array $agentConfig, string $effectiveLoaderKey): void
     {
-        /** @var array<int, string> $activeSkills */
-        $activeSkills = $this->config()->get('agent-skills.skills.active_skills', []);
+        /** @var mixed[] $activeSkills */
+        $activeSkills = is_array($agentConfig['active_skills'] ?? null) ? $agentConfig['active_skills'] : [];
 
-        $this->app->singleton(GetSkillsTool::class, static fn ($app): GetSkillsTool => new GetSkillsTool($app->make(SkillLoaderInterface::class)));
+        $getSkillsToolId = sprintf('agent_skills.tool.%s.get_skills', $agentName);
+        $this->app->singleton($getSkillsToolId, static function ($app) use ($effectiveLoaderKey): GetSkillsTool {
+            return new GetSkillsTool($app->make($effectiveLoaderKey));
+        });
 
         foreach ($activeSkills as $skillName) {
-            $this->app->singleton('agent_skills.tool.get_skill.' . $skillName, static fn ($app): GetSkillTool => new GetSkillTool($app->make(SkillLoaderInterface::class), $skillName));
+            if (!is_string($skillName) || '' === $skillName) {
+                continue;
+            }
 
-            $this->app->singleton('agent_skills.tool.execute_script.' . $skillName, static fn ($app): ExecuteSkillScriptTool => new ExecuteSkillScriptTool($app->make(SkillLoaderInterface::class), $skillName));
+            $getSkillToolId = sprintf('agent_skills.tool.%s.%s', $agentName, $skillName);
+            $this->app->singleton($getSkillToolId, static function ($app) use ($effectiveLoaderKey, $skillName): GetSkillTool {
+                return new GetSkillTool($app->make($effectiveLoaderKey), $skillName);
+            });
+
+            $executeScriptToolId = sprintf('agent_skills.tool.%s.execute_script.%s', $agentName, $skillName);
+            $this->app->singleton($executeScriptToolId, static function ($app) use ($effectiveLoaderKey, $skillName): ExecuteSkillScriptTool {
+                return new ExecuteSkillScriptTool($app->make($effectiveLoaderKey), $skillName);
+            });
         }
     }
 

@@ -383,6 +383,104 @@ final class SkillParserTest extends TestCase
         $this->assertSame('Asset content', $skill->loadAsset('template.txt'));
     }
 
+    public function testParseCreatesScriptsLister(): void
+    {
+        $skillDir = $this->createSkillFile(<<<'MD'
+            ---
+            name: lister-skill
+            description: A skill with scripts
+            ---
+            Body.
+            MD);
+
+        (new Filesystem())->mkdir($skillDir . '/scripts');
+        (new Filesystem())->dumpFile($skillDir . '/scripts/setup.sh', '#!/bin/bash');
+        (new Filesystem())->dumpFile($skillDir . '/scripts/analyze.py', '# python');
+
+        $skill = (new SkillParser())->parse($skillDir);
+
+        $scripts = $skill->listScripts();
+        $this->assertCount(2, $scripts);
+        $this->assertContains('analyze.py', $scripts);
+        $this->assertContains('setup.sh', $scripts);
+    }
+
+    public function testParseCreatesReferencesLister(): void
+    {
+        $skillDir = $this->createSkillFile(<<<'MD'
+            ---
+            name: ref-lister
+            description: A skill with references
+            ---
+            Body.
+            MD);
+
+        (new Filesystem())->mkdir($skillDir . '/references');
+        (new Filesystem())->dumpFile($skillDir . '/references/guide.md', '# Guide');
+
+        $skill = (new SkillParser())->parse($skillDir);
+
+        $this->assertSame(['guide.md'], $skill->listReferences());
+    }
+
+    public function testParseCreatesAssetsLister(): void
+    {
+        $skillDir = $this->createSkillFile(<<<'MD'
+            ---
+            name: asset-lister
+            description: A skill with assets
+            ---
+            Body.
+            MD);
+
+        (new Filesystem())->mkdir($skillDir . '/assets');
+        (new Filesystem())->dumpFile($skillDir . '/assets/logo.png', 'fake-png');
+        (new Filesystem())->dumpFile($skillDir . '/assets/template.html', '<html>');
+
+        $skill = (new SkillParser())->parse($skillDir);
+
+        $assets = $skill->listAssets();
+        $this->assertCount(2, $assets);
+        $this->assertContains('logo.png', $assets);
+        $this->assertContains('template.html', $assets);
+    }
+
+    public function testParseReturnsEmptyListWhenNoResourceDirectories(): void
+    {
+        $skillDir = $this->createSkillFile(<<<'MD'
+            ---
+            name: no-resources
+            description: A skill without resource directories
+            ---
+            Body.
+            MD);
+
+        $skill = (new SkillParser())->parse($skillDir);
+
+        $this->assertSame([], $skill->listScripts());
+        $this->assertSame([], $skill->listReferences());
+        $this->assertSame([], $skill->listAssets());
+        $this->assertSame('', $skill->getResourceListing());
+    }
+
+    public function testParseFromContentWithCustomListers(): void
+    {
+        $content = "---\nname: remote-skill\ndescription: A skill with remote listers\n---\nBody.";
+
+        $skill = (new SkillParser())->parseFromContent(
+            $content,
+            'github://owner/repo/remote-skill',
+            scriptsLister: static fn (): array => ['deploy.sh'],
+            referencesLister: static fn (): array => ['api.md'],
+            assetsLister: static fn (): array => ['logo.svg'],
+        );
+
+        $this->assertSame(['deploy.sh'], $skill->listScripts());
+        $this->assertSame(['api.md'], $skill->listReferences());
+        $this->assertSame(['logo.svg'], $skill->listAssets());
+        $this->assertStringContainsString('## Available Resources', $skill->getResourceListing());
+    }
+
     /**
      * Creates a SKILL.md file in a subdirectory matching the skill name.
      *

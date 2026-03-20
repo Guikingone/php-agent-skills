@@ -94,7 +94,19 @@ final class AgentSkillBundleExtension extends Extension
 
             $allEffectiveLoaderRefs[] = new Reference($traceableLoaderId);
 
-            $this->registerAgentInputProcessor($container, $agentName, $agentConfig, $traceableLoaderId);
+            $container->setDefinition(sprintf('agent_skills.%s.input_processor', $agentName), (new Definition(SkillInputProcessor::class))
+                ->setLazy(true)
+                ->setArguments([
+                    new Reference($traceableLoaderId),
+                    array_map(
+                        static fn (mixed $skill): string => is_array($skill) && is_string($skill['name'] ?? null) ? $skill['name'] : '',
+                        is_array($agentConfig['active_skills'] ?? null) ? $agentConfig['active_skills'] : [],
+                    ),
+                    $agentConfig['include_index'] ?? false,
+                ])
+                ->addTag('proxy', ['interface' => InputProcessorInterface::class])
+                ->addTag('ai.agent.input_processor', ['agent' => $agentName, 'priority' => -50]));
+
             $this->registerAgentTools($container, $agentName, $agentConfig, $traceableLoaderId);
         }
 
@@ -156,33 +168,6 @@ final class AgentSkillBundleExtension extends Extension
         }
 
         return $effectiveLoaderId;
-    }
-
-    /**
-     * @param array<string, mixed> $agentConfig
-     */
-    private function registerAgentInputProcessor(ContainerBuilder $container, string $agentName, array $agentConfig, string $effectiveLoaderId): void
-    {
-        $activeSkills = is_array($agentConfig['active_skills'] ?? null) ? $agentConfig['active_skills'] : [];
-        $includeIndex = (bool) ($agentConfig['include_index'] ?? false);
-
-        /** @var list<string> $activeSkillNames */
-        $activeSkillNames = array_map(
-            static fn (mixed $skill): string => is_array($skill) && is_string($skill['name'] ?? null) ? $skill['name'] : '',
-            $activeSkills,
-        );
-
-        $inputProcessorId = sprintf('agent_skills.%s.input_processor', $agentName);
-
-        $container->setDefinition($inputProcessorId, (new Definition(SkillInputProcessor::class))
-            ->setLazy(true)
-            ->setArguments([
-                new Reference($effectiveLoaderId),
-                $activeSkillNames,
-                $includeIndex,
-            ])
-            ->addTag('proxy', ['interface' => InputProcessorInterface::class])
-            ->addTag('ai.agent.input_processor', ['agent' => $agentName, 'priority' => -50]));
     }
 
     /**

@@ -47,7 +47,7 @@ final readonly class GetSkillsTool implements Tool
         }
 
         $formatted = array_values(array_map(
-            static fn (SkillInterface $skill): string => sprintf("# Skill: %s\n\n%s", $skill->getName(), $skill->getBody()),
+            static fn (SkillInterface $skill): string => sprintf("# Skill: %s\n\n%s", $skill->getName(), $skill->getBody()) . $skill->getResourceListing(),
             $skills,
         ));
 
