@@ -29,16 +29,19 @@ interface SkillParserInterface
     public function parseMetadataOnly(string $directory): SkillMetadataInterface;
 
     /**
-     * Parses raw SKILL.md content with optional resource loaders.
+     * Parses raw SKILL.md content with optional resource loaders and listers.
      *
      * This enables source-agnostic parsing (e.g. from GitHub, database, etc.)
-     * where the caller provides the content and closures for loading sub-resources.
+     * where the caller provides the content and closures for loading/listing sub-resources.
      *
      * @param string $content Raw SKILL.md content (frontmatter + body)
      * @param string $source Source identifier for error messages
      * @param Closure|null $scriptsLoader fn(string $script): string
      * @param Closure|null $referencesLoader fn(string $reference): ?string
      * @param Closure|null $assetsLoader fn(string $asset): ?string
+     * @param Closure|null $scriptsLister fn(): string[]
+     * @param Closure|null $referencesLister fn(): string[]
+     * @param Closure|null $assetsLister fn(): string[]
      *
      * @throws InvalidArgumentException If content is malformed
      */
@@ -48,6 +51,9 @@ interface SkillParserInterface
         ?Closure $scriptsLoader = null,
         ?Closure $referencesLoader = null,
         ?Closure $assetsLoader = null,
+        ?Closure $scriptsLister = null,
+        ?Closure $referencesLister = null,
+        ?Closure $assetsLister = null,
     ): SkillInterface;
 
     /**

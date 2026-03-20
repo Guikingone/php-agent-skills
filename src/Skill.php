@@ -7,6 +7,9 @@ namespace AgentSkills;
 use AgentSkills\Exception\RuntimeException;
 use Closure;
 
+use function implode;
+use function sprintf;
+
 /**
  * Represents a fully loaded Agent Skill.
  *
@@ -25,6 +28,9 @@ final readonly class Skill implements SkillInterface
         private ?Closure $scriptsLoader = null,
         private ?Closure $referencesLoader = null,
         private ?Closure $assetsLoader = null,
+        private ?Closure $scriptsLister = null,
+        private ?Closure $referencesLister = null,
+        private ?Closure $assetsLister = null,
     ) {
     }
 
@@ -80,5 +86,80 @@ final readonly class Skill implements SkillInterface
         }
 
         return ($this->assetsLoader)($asset);
+    }
+
+    /**
+     * @return string[]
+     */
+    public function listScripts(): array
+    {
+        if (!$this->scriptsLister instanceof Closure) {
+            return [];
+        }
+
+        return ($this->scriptsLister)();
+    }
+
+    /**
+     * @return string[]
+     */
+    public function listReferences(): array
+    {
+        if (!$this->referencesLister instanceof Closure) {
+            return [];
+        }
+
+        return ($this->referencesLister)();
+    }
+
+    /**
+     * @return string[]
+     */
+    public function listAssets(): array
+    {
+        if (!$this->assetsLister instanceof Closure) {
+            return [];
+        }
+
+        return ($this->assetsLister)();
+    }
+
+    public function getResourceListing(): string
+    {
+        $scripts = $this->listScripts();
+        $references = $this->listReferences();
+        $assets = $this->listAssets();
+
+        if ([] === $scripts && [] === $references && [] === $assets) {
+            return '';
+        }
+
+        $sections = [];
+
+        if ([] !== $scripts) {
+            $items = '';
+            foreach ($scripts as $script) {
+                $items .= sprintf("- %s\n", $script);
+            }
+            $sections[] = "### Scripts\n" . $items;
+        }
+
+        if ([] !== $references) {
+            $items = '';
+            foreach ($references as $reference) {
+                $items .= sprintf("- %s\n", $reference);
+            }
+            $sections[] = "### References\n" . $items;
+        }
+
+        if ([] !== $assets) {
+            $items = '';
+            foreach ($assets as $asset) {
+                $items .= sprintf("- %s\n", $asset);
+            }
+            $sections[] = "### Assets\n" . $items;
+        }
+
+        return "\n\n## Available Resources\n\n" . implode("\n", $sections);
     }
 }

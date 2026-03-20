@@ -9,28 +9,27 @@ return [
     |--------------------------------------------------------------------------
     |
     | Configure skill loading, active skills, and agent integration.
-    | When published in a Laravel app, you may use resource_path('skills')
-    | and storage_path('app/skill-evals') for default paths.
+    | Each agent can have its own set of skill directories, GitHub repositories,
+    | active skills, and index settings.
     |
     */
     'skills' => [
         'enabled' => env('AGENT_SKILLS_ENABLED', false),
 
-        'agent' => env('AGENT_SKILLS_AGENT'),
-
-        'directories' => [
-            // resource_path('skills'),
+        'agents' => [
+            // 'my_agent' => [
+            //     'directories' => [
+            //         resource_path('skills'),
+            //     ],
+            //     'github_repositories' => [
+            //         // ['repository' => 'owner/repo', 'path' => '', 'branch' => 'main', 'token' => null],
+            //     ],
+            //     'active_skills' => [
+            //         // 'my-skill',
+            //     ],
+            //     'include_index' => false,
+            // ],
         ],
-
-        'github_repositories' => [
-            // ['repository' => 'owner/repo', 'path' => '', 'branch' => 'main', 'token' => null],
-        ],
-
-        'active_skills' => [
-            // 'my-skill',
-        ],
-
-        'include_index' => false,
     ],
 
     /*

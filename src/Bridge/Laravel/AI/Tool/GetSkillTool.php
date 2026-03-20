@@ -50,7 +50,7 @@ final readonly class GetSkillTool implements Tool
             return sprintf('Skill "%s" not found.', $this->skillName);
         }
 
-        $output = sprintf("# Skill: %s\n\n%s", $skill->getName(), $skill->getBody());
+        $output = sprintf("# Skill: %s\n\n%s", $skill->getName(), $skill->getBody()) . $skill->getResourceListing();
 
         $reference = $request['reference'] ?? null;
         if (is_string($reference) && '' !== $reference) {

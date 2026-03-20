@@ -228,6 +228,10 @@ The :class:`Symfony\\AI\\Agent\\Toolbox\\Tool\\SkillTool` provides three built-i
 * ``get_skills``: Get all available skills
 * ``execute_skill_script``: Execute a script from the skill's ``scripts/`` directory
 
+When a skill is loaded via ``get_skill`` or ``get_skills``, the output automatically includes
+a resource listing section showing available scripts, references, and assets. This allows the
+agent to discover what resources are available and request them by name.
+
 Loading Skills with References
 ..............................
 
@@ -454,8 +458,43 @@ The :class:`AgentSkills\\SkillLoaderInterface` provides methods for efficient sk
 
 Use Level 1 for listings, menus, or selection UIs. Use Level 2 when you need the actual skill content.
 
-Evaluating Skills
-^^^^^^^^^^^^^^^^^
+**Level 3 - Resource Enumeration**
+
+Once a skill is loaded (Level 2), you can list its available resources without knowing filenames upfront::
+
+    $skill = $loader->loadSkill('twig-component');
+
+    // List available resources by type
+    $scripts    = $skill->listScripts();     // ['setup.sh', 'analyze.py']
+    $references = $skill->listReferences();  // ['api-guide.md', 'patterns.md']
+    $assets     = $skill->listAssets();      // ['template.html']
+
+    // Get a formatted Markdown listing of all available resources
+    $listing = $skill->getResourceListing();
+
+The ``getResourceListing()`` method returns a Markdown string that includes only non-empty
+resource types::
+
+    ## Available Resources
+
+    ### Scripts
+    - setup.sh
+    - analyze.py
+
+    ### References
+    - api-guide.md
+
+    ### Assets
+    - template.html
+
+If the skill has no resources, ``getResourceListing()`` returns an empty string.
+
+This resource listing is **automatically appended** to the skill output when skills are
+loaded via tools (``SkillTool``, ``GetSkillTool``, ``GetSkillsTool``) or injected via context
+processors (``SkillInputProcessor``, ``SkillPromptMiddleware``). The agent can then request
+specific resources by name using ``loadScript()``, ``loadReference()``, or ``loadAsset()``.
+
+## Evaluating Skills
 
 The evaluation system measures how well an agent performs with and without a skill, using
 LLM-based grading of assertions. This helps you validate that a skill actually improves

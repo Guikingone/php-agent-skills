@@ -153,6 +153,29 @@ final class SkillInputProcessorTest extends TestCase
         $this->assertStringContainsString('# Agent Skills', $systemPrompt);
     }
 
+    public function testProcessInputIncludesResourceListingForActiveSkills(): void
+    {
+        $this->createSkillDirectory('code-review', 'Reviews code');
+        $skillDir = $this->tempDir . '/code-review';
+        (new Filesystem())->mkdir($skillDir . '/scripts');
+        (new Filesystem())->dumpFile($skillDir . '/scripts/lint.sh', '#!/bin/bash');
+        (new Filesystem())->mkdir($skillDir . '/references');
+        (new Filesystem())->dumpFile($skillDir . '/references/style-guide.md', '# Style');
+
+        $discovery = new FilesystemSkillLoader([$this->tempDir]);
+        $processor = new SkillInputProcessor($discovery, activeSkills: ['code-review'], includeIndex: false);
+
+        $input = new Input('gpt-4o', new MessageBag(Message::ofUser('Hello')));
+        $processor->processInput($input);
+
+        $options = $input->getOptions();
+        $systemPrompt = $options['system_prompt'];
+        $this->assertIsString($systemPrompt);
+        $this->assertStringContainsString('## Available Resources', $systemPrompt);
+        $this->assertStringContainsString('- lint.sh', $systemPrompt);
+        $this->assertStringContainsString('- style-guide.md', $systemPrompt);
+    }
+
     private function createSkillDirectory(string $name, string $description): void
     {
         $skillDir = $this->tempDir . '/' . $name;

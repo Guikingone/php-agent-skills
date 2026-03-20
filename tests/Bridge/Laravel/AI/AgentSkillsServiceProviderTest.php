@@ -5,8 +5,7 @@ declare(strict_types=1);
 namespace AgentSkills\Tests\Bridge\Laravel\AI;
 
 use AgentSkills\Bridge\Laravel\AI\AgentSkillsServiceProvider;
-use AgentSkills\Bridge\Laravel\AI\Middleware\SkillPromptMiddleware;
-use AgentSkills\Bridge\Laravel\AI\Tool\GetSkillsTool;
+use AgentSkills\ChainSkillLoader;
 use AgentSkills\Evaluation\Aggregator\BenchmarkAggregatorInterface;
 use AgentSkills\Evaluation\EvalSuiteLoaderInterface;
 use AgentSkills\Evaluation\Grader\GraderInterface;
@@ -60,14 +59,14 @@ final class AgentSkillsServiceProviderTest extends TestCase
         $this->assertTrue($this->app->bound(SkillValidatorInterface::class));
     }
 
-    public function testRegistersFilesystemLoader(): void
+    public function testRegistersPerAgentFilesystemLoader(): void
     {
         $this->configureEnabled();
 
         $provider = new AgentSkillsServiceProvider($this->app);
         $provider->register();
 
-        $this->assertTrue($this->app->bound('agent_skills.filesystem_loader'));
+        $this->assertTrue($this->app->bound('agent_skills.default.filesystem_loader'));
     }
 
     public function testRegistersSkillLoaderAlias(): void
@@ -80,37 +79,37 @@ final class AgentSkillsServiceProviderTest extends TestCase
         $this->assertTrue($this->app->bound(SkillLoaderInterface::class) || $this->app->isAlias(SkillLoaderInterface::class));
     }
 
-    public function testRegistersMiddleware(): void
+    public function testRegistersPerAgentMiddleware(): void
     {
         $this->configureEnabled();
 
         $provider = new AgentSkillsServiceProvider($this->app);
         $provider->register();
 
-        $this->assertTrue($this->app->bound(SkillPromptMiddleware::class));
+        $this->assertTrue($this->app->bound('agent_skills.default.middleware'));
     }
 
-    public function testRegistersGetSkillsTool(): void
+    public function testRegistersPerAgentGetSkillsTool(): void
     {
         $this->configureEnabled();
 
         $provider = new AgentSkillsServiceProvider($this->app);
         $provider->register();
 
-        $this->assertTrue($this->app->bound(GetSkillsTool::class));
+        $this->assertTrue($this->app->bound('agent_skills.tool.default.get_skills'));
     }
 
-    public function testRegistersPerSkillTools(): void
+    public function testRegistersPerAgentPerSkillTools(): void
     {
         $this->configureEnabled(['active_skills' => ['code-review', 'testing']]);
 
         $provider = new AgentSkillsServiceProvider($this->app);
         $provider->register();
 
-        $this->assertTrue($this->app->bound('agent_skills.tool.get_skill.code-review'));
-        $this->assertTrue($this->app->bound('agent_skills.tool.execute_script.code-review'));
-        $this->assertTrue($this->app->bound('agent_skills.tool.get_skill.testing'));
-        $this->assertTrue($this->app->bound('agent_skills.tool.execute_script.testing'));
+        $this->assertTrue($this->app->bound('agent_skills.tool.default.code-review'));
+        $this->assertTrue($this->app->bound('agent_skills.tool.default.execute_script.code-review'));
+        $this->assertTrue($this->app->bound('agent_skills.tool.default.testing'));
+        $this->assertTrue($this->app->bound('agent_skills.tool.default.execute_script.testing'));
     }
 
     public function testRegistersEvaluationServices(): void
@@ -145,20 +144,130 @@ final class AgentSkillsServiceProviderTest extends TestCase
         $this->assertTrue($this->app->bound(GraderInterface::class));
     }
 
+    public function testMultipleAgentsEachGetOwnLoader(): void
+    {
+        $this->config->set('agent-skills.skills', [
+            'enabled' => true,
+            'agents' => [
+                'agent_one' => [
+                    'directories' => [sys_get_temp_dir()],
+                    'github_repositories' => [],
+                    'active_skills' => [],
+                    'include_index' => false,
+                ],
+                'agent_two' => [
+                    'directories' => [sys_get_temp_dir()],
+                    'github_repositories' => [],
+                    'active_skills' => [],
+                    'include_index' => false,
+                ],
+            ],
+        ]);
+        $this->config->set('agent-skills.evaluation', [
+            'workspace' => sys_get_temp_dir() . '/skill-evals',
+            'grading_model' => null,
+            'grading_provider' => null,
+        ]);
+
+        $provider = new AgentSkillsServiceProvider($this->app);
+        $provider->register();
+
+        $this->assertTrue($this->app->bound('agent_skills.agent_one.filesystem_loader'));
+        $this->assertTrue($this->app->bound('agent_skills.agent_two.filesystem_loader'));
+        $this->assertTrue($this->app->bound('agent_skills.agent_one.middleware'));
+        $this->assertTrue($this->app->bound('agent_skills.agent_two.middleware'));
+        $this->assertTrue($this->app->bound('agent_skills.tool.agent_one.get_skills'));
+        $this->assertTrue($this->app->bound('agent_skills.tool.agent_two.get_skills'));
+    }
+
+    public function testMultipleAgentsGetGlobalChainLoader(): void
+    {
+        $this->config->set('agent-skills.skills', [
+            'enabled' => true,
+            'agents' => [
+                'agent_one' => [
+                    'directories' => [sys_get_temp_dir()],
+                    'github_repositories' => [],
+                    'active_skills' => [],
+                    'include_index' => false,
+                ],
+                'agent_two' => [
+                    'directories' => [sys_get_temp_dir()],
+                    'github_repositories' => [],
+                    'active_skills' => [],
+                    'include_index' => false,
+                ],
+            ],
+        ]);
+        $this->config->set('agent-skills.evaluation', [
+            'workspace' => sys_get_temp_dir() . '/skill-evals',
+            'grading_model' => null,
+            'grading_provider' => null,
+        ]);
+
+        $provider = new AgentSkillsServiceProvider($this->app);
+        $provider->register();
+
+        $this->assertTrue($this->app->bound(SkillLoaderInterface::class));
+
+        $loader = $this->app->make(SkillLoaderInterface::class);
+        $this->assertInstanceOf(ChainSkillLoader::class, $loader);
+    }
+
+    public function testPerAgentToolsWithMultipleAgents(): void
+    {
+        $this->config->set('agent-skills.skills', [
+            'enabled' => true,
+            'agents' => [
+                'reviewer' => [
+                    'directories' => [sys_get_temp_dir()],
+                    'github_repositories' => [],
+                    'active_skills' => ['code-review'],
+                    'include_index' => false,
+                ],
+                'assistant' => [
+                    'directories' => [sys_get_temp_dir()],
+                    'github_repositories' => [],
+                    'active_skills' => ['twig-component'],
+                    'include_index' => true,
+                ],
+            ],
+        ]);
+        $this->config->set('agent-skills.evaluation', [
+            'workspace' => sys_get_temp_dir() . '/skill-evals',
+            'grading_model' => null,
+            'grading_provider' => null,
+        ]);
+
+        $provider = new AgentSkillsServiceProvider($this->app);
+        $provider->register();
+
+        $this->assertTrue($this->app->bound('agent_skills.tool.reviewer.code-review'));
+        $this->assertTrue($this->app->bound('agent_skills.tool.reviewer.execute_script.code-review'));
+        $this->assertFalse($this->app->bound('agent_skills.tool.reviewer.twig-component'));
+
+        $this->assertTrue($this->app->bound('agent_skills.tool.assistant.twig-component'));
+        $this->assertTrue($this->app->bound('agent_skills.tool.assistant.execute_script.twig-component'));
+        $this->assertFalse($this->app->bound('agent_skills.tool.assistant.code-review'));
+    }
+
     /**
-     * @param array<string, mixed> $skillOverrides
+     * @param array<string, mixed> $agentOverrides
      * @param array<string, mixed> $evalOverrides
      */
-    private function configureEnabled(array $skillOverrides = [], array $evalOverrides = []): void
+    private function configureEnabled(array $agentOverrides = [], array $evalOverrides = []): void
     {
         $skills = [
             'enabled' => true,
-            'agent' => null,
-            'directories' => [sys_get_temp_dir()],
-            'github_repositories' => [],
-            'active_skills' => [],
-            'include_index' => false,
-            ...$skillOverrides,
+            'agents' => [
+                'default' => [
+                    'directories' => [sys_get_temp_dir()],
+                    'github_repositories' => [],
+                    'active_skills' => [],
+                    'include_index' => false,
+                    ...$agentOverrides,
+                ],
+            ],
         ];
 
         $evaluation = [

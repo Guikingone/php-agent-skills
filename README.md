@@ -83,15 +83,18 @@ php artisan vendor:publish --tag=agent-skills-config
 return [
     'skills' => [
         'enabled' => true,
-        'agent' => \App\Agents\MyAgent::class,
-        'directories' => [
-            resource_path('skills'),
+        'agents' => [
+            'my_agent' => [
+                'directories' => [
+                    resource_path('skills'),
+                ],
+                'active_skills' => [
+                    'twig-component',
+                    'laravel-console',
+                ],
+                'include_index' => true,
+            ],
         ],
-        'active_skills' => [
-            'twig-component',
-            'symfony-console',
-        ],
-        'include_index' => true,
     ],
 ];
 ```

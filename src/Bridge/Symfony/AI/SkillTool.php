@@ -44,7 +44,7 @@ final readonly class SkillTool
             return sprintf('Skill "%s" not found.', $this->skillName);
         }
 
-        $output = sprintf("# Skill: %s\n\n%s", $skill->getName(), $skill->getBody());
+        $output = sprintf("# Skill: %s\n\n%s", $skill->getName(), $skill->getBody()) . $skill->getResourceListing();
 
         if (null !== $reference) {
             try {
@@ -72,7 +72,7 @@ final readonly class SkillTool
         }
 
         return array_map(
-            static fn (SkillInterface $skill): string => sprintf("# Skill: %s\n\n%s", $skill->getName(), $skill->getBody()),
+            static fn (SkillInterface $skill): string => sprintf("# Skill: %s\n\n%s", $skill->getName(), $skill->getBody()) . $skill->getResourceListing(),
             $skills,
         );
     }

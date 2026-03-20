@@ -87,4 +87,114 @@ final class SkillTest extends TestCase
 
         $this->assertSame($assetPath, $skill->loadAsset('logo.png'));
     }
+
+    public function testListScriptsReturnsEmptyWithoutLister(): void
+    {
+        $skill = new Skill('body', new SkillMetadata('my-skill', 'A skill'));
+
+        $this->assertSame([], $skill->listScripts());
+    }
+
+    public function testListScriptsReturnsFilenames(): void
+    {
+        $skill = new Skill(
+            'body',
+            new SkillMetadata('my-skill', 'A skill'),
+            scriptsLister: static fn (): array => ['setup.sh', 'analyze.py'],
+        );
+
+        $this->assertSame(['setup.sh', 'analyze.py'], $skill->listScripts());
+    }
+
+    public function testListReferencesReturnsEmptyWithoutLister(): void
+    {
+        $skill = new Skill('body', new SkillMetadata('my-skill', 'A skill'));
+
+        $this->assertSame([], $skill->listReferences());
+    }
+
+    public function testListReferencesReturnsFilenames(): void
+    {
+        $skill = new Skill(
+            'body',
+            new SkillMetadata('my-skill', 'A skill'),
+            referencesLister: static fn (): array => ['api-guide.md'],
+        );
+
+        $this->assertSame(['api-guide.md'], $skill->listReferences());
+    }
+
+    public function testListAssetsReturnsEmptyWithoutLister(): void
+    {
+        $skill = new Skill('body', new SkillMetadata('my-skill', 'A skill'));
+
+        $this->assertSame([], $skill->listAssets());
+    }
+
+    public function testListAssetsReturnsFilenames(): void
+    {
+        $skill = new Skill(
+            'body',
+            new SkillMetadata('my-skill', 'A skill'),
+            assetsLister: static fn (): array => ['template.html', 'logo.png'],
+        );
+
+        $this->assertSame(['template.html', 'logo.png'], $skill->listAssets());
+    }
+
+    public function testGetResourceListingReturnsEmptyWhenNoResources(): void
+    {
+        $skill = new Skill('body', new SkillMetadata('my-skill', 'A skill'));
+
+        $this->assertSame('', $skill->getResourceListing());
+    }
+
+    public function testGetResourceListingWithAllResourceTypes(): void
+    {
+        $skill = new Skill(
+            'body',
+            new SkillMetadata('my-skill', 'A skill'),
+            scriptsLister: static fn (): array => ['setup.sh'],
+            referencesLister: static fn (): array => ['api-guide.md'],
+            assetsLister: static fn (): array => ['template.html'],
+        );
+
+        $listing = $skill->getResourceListing();
+
+        $this->assertStringContainsString('## Available Resources', $listing);
+        $this->assertStringContainsString('### Scripts', $listing);
+        $this->assertStringContainsString('- setup.sh', $listing);
+        $this->assertStringContainsString('### References', $listing);
+        $this->assertStringContainsString('- api-guide.md', $listing);
+        $this->assertStringContainsString('### Assets', $listing);
+        $this->assertStringContainsString('- template.html', $listing);
+    }
+
+    public function testGetResourceListingWithOnlyScripts(): void
+    {
+        $skill = new Skill(
+            'body',
+            new SkillMetadata('my-skill', 'A skill'),
+            scriptsLister: static fn (): array => ['setup.sh'],
+        );
+
+        $listing = $skill->getResourceListing();
+
+        $this->assertStringContainsString('### Scripts', $listing);
+        $this->assertStringNotContainsString('### References', $listing);
+        $this->assertStringNotContainsString('### Assets', $listing);
+    }
+
+    public function testGetResourceListingWithEmptyListersReturnsEmpty(): void
+    {
+        $skill = new Skill(
+            'body',
+            new SkillMetadata('my-skill', 'A skill'),
+            scriptsLister: static fn (): array => [],
+            referencesLister: static fn (): array => [],
+            assetsLister: static fn (): array => [],
+        );
+
+        $this->assertSame('', $skill->getResourceListing());
+    }
 }

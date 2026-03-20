@@ -8,6 +8,7 @@ use AgentSkills\Exception\InvalidArgumentException;
 use AgentSkills\Exception\RuntimeException;
 use Closure;
 use Symfony\Component\Filesystem\Filesystem;
+use Symfony\Component\Finder\Finder;
 use Symfony\Component\String\UnicodeString;
 
 use function array_filter;
@@ -90,6 +91,9 @@ final readonly class SkillParser implements SkillParserInterface
 
                 return $this->filesystem->readFile($path . '/' . $asset);
             },
+            $this->createDirectoryLister($directory . '/scripts'),
+            $this->createDirectoryLister($directory . '/references'),
+            $this->createDirectoryLister($directory . '/assets'),
         );
     }
 
@@ -114,12 +118,15 @@ final readonly class SkillParser implements SkillParserInterface
         ?Closure $scriptsLoader = null,
         ?Closure $referencesLoader = null,
         ?Closure $assetsLoader = null,
+        ?Closure $scriptsLister = null,
+        ?Closure $referencesLister = null,
+        ?Closure $assetsLister = null,
     ): SkillInterface {
         [$frontmatter, $body] = $this->extractFrontmatter($content, $source);
 
         $metadata = $this->buildMetadata($frontmatter, $source);
 
-        return new Skill($body, $metadata, $scriptsLoader, $referencesLoader, $assetsLoader);
+        return new Skill($body, $metadata, $scriptsLoader, $referencesLoader, $assetsLoader, $scriptsLister, $referencesLister, $assetsLister);
     }
 
     public function parseMetadataFromContent(string $content, string $source): SkillMetadataInterface
@@ -189,6 +196,29 @@ final readonly class SkillParser implements SkillParserInterface
             isset($frontmatter['metadata']) && is_array($frontmatter['metadata']) ? $frontmatter['metadata'] : [],
             $frontmatter,
         );
+    }
+
+    /**
+     * Creates a closure that lists filenames in a directory.
+     *
+     * @return Closure(): string[]
+     */
+    private function createDirectoryLister(string $directoryPath): Closure
+    {
+        return static function () use ($directoryPath): array {
+            if (!is_dir($directoryPath)) {
+                return [];
+            }
+
+            $finder = (new Finder())->files()->in($directoryPath)->depth(0)->sortByName();
+            $names = [];
+
+            foreach ($finder as $file) {
+                $names[] = $file->getFilename();
+            }
+
+            return $names;
+        };
     }
 
     /**
